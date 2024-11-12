@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        circle, text, tspan, rect {
+            /*cursor: grab;*/
+            user-select: none;
+        }
+        html, body, svg {
+            margin: 0;
+        }
+        /*#container {*/
+        /*    margin: 30px;*/
+        /*}*/
+        #test-rect-1, #test-rect-4 {
+            cursor: grabbing;
+        }
+        line {
+            cursor: ew-resize;
+        }
+        .x-frame {
+            cursor: ew-resize;
+        }
+        .y-frame {
+            cursor: ns-resize;
+        }
+        .nwse-frame{
+            cursor: nwse-resize;
+        }
+        .nesw-frame{
+            cursor: nesw-resize;
+        }
+        .button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<svg width="1200" height="800" viewBox="0 0 1200 800" id="container">
+    <rect x="0" y="0" width="0" height="0" id="ref-point-1"></rect>
+    <rect x="1200" y="800" width="0" height="0" id="ref-point-2"></rect>
+<!--    <g transform="translate(250, 150)">-->
+<!--        <rect x="100" y="100" width="6" height="6" fill="gray" class="nwse-frame"></rect>-->
+<!--        <rect x="394" y="294" width="6" height="6" fill="gray" class="nwse-frame"></rect>-->
+<!--        <rect x="100" y="294" width="6" height="6" fill="gray" class="nesw-frame"></rect>-->
+<!--        <rect x="394" y="100" width="6" height="6" fill="gray" class="nesw-frame"></rect>-->
+<!--        <rect x="100" y="105" width="300" height="190" fill="gray" class="x-frame"></rect>-->
+<!--        <rect x="105" y="100" width="290" height="200" fill="gray" class="y-frame"></rect>-->
+<!--        <rect x="105" y="105" width="290" height="25" fill="gray"></rect>-->
+<!--        <rect x="105" y="130" width="290" height="165" fill="white"></rect>-->
+<!--        <rect x="375" y="105" width="20" height="20" fill="white" class="button"></rect>-->
+<!--        <rect x="350" y="105" width="20" height="20" fill="white" class="button"></rect>-->
+<!--        <rect x="325" y="105" width="20" height="20" fill="white" class="button"></rect>-->
+<!--    </g>-->
+<!--    <line x1="100" x2="300" y1="100" y2="300" stroke="black" stroke-width="5"></line>-->
+    <line x1="0" x2="0" y1="0" y2="100" stroke="black"></line>
+    <line x1="1200" x2="1200" y1="700" y2="800" stroke="black"></line>
+<!--    <clipPath id="myClip">-->
+<!--        <rect x="100" y="330" width="300" height="170" id="test-rect-6" />-->
+<!--    </clipPath>-->
+</svg>
+<script type="module">
+    import init, {Binder} from "./pkg/window_lib.js";
+
+    await init();
+    const binder = new Binder();
+    function resizeFunc() {
+        const title = document.getElementById('container');
+        title.setAttribute('width', (window.innerWidth * 0.98).toString());
+        title.setAttribute('height', (window.innerHeight * 0.98).toString());
+    }
+    window.addEventListener("resize", resizeFunc);
+    resizeFunc();
+    const refPoint1 = document.getElementById('ref-point-1');
+    const refPoint2 = document.getElementById('ref-point-2');
+
+    function getXY(event) {
+        const rect1 = refPoint1.getBoundingClientRect();
+        const rect2 = refPoint2.getBoundingClientRect();
+        const raw_x = event.clientX;
+        const raw_y = event.clientY;
+        const scale = (rect2.y - rect1.y) / 800.0;
+        const offset_x = rect1.x;
+        const offset_y = rect1.y;
+        const fixed_x = (raw_x - offset_x) / scale;
+        const fixed_y = (raw_y - offset_y) / scale;
+        return [fixed_x, fixed_y];
+    }
+    document.onmouseup = (event) => {
+        if (event.button === 0) {
+            binder.mouse_up();
+        }
+    };
+    document.onmousedown = (event) => {
+        if (event.button === 0) {
+            console.log(getXY(event));
+            binder.mouse_down(...getXY(event));
+        } else {
+            binder.mouse_up();
+        }
+    };
+    document.onmousemove = (event) => binder.mouse_move(...getXY(event));
+    function animate() {
+        binder.update();
+        window.requestAnimationFrame(animate);
+    }
+    window.requestAnimationFrame(animate);
+</script>
+</body>
+</html>
