@@ -1,6 +1,7 @@
 use web_sys::{window, Document, Element};
 pub(crate) struct ElementManager {
     pub(crate) document: Document,
+    pub(crate) container_id: String,
     pub(crate) elements: Vec<Element>,
     clip_paths: Vec<Element>,
     pub(crate) offset_x: f64,
@@ -9,9 +10,15 @@ pub(crate) struct ElementManager {
 }
 
 impl ElementManager {
-    pub(crate) fn new() -> ElementManager {
+    pub(crate) fn get_container(&self) -> Element {
+        self.document
+            .get_element_by_id(self.container_id.as_str())
+            .unwrap()
+    }
+    pub(crate) fn new(container_id: &str) -> ElementManager {
         ElementManager {
             document: window().unwrap().document().unwrap(),
+            container_id: container_id.to_string(),
             elements: vec![],
             clip_paths: vec![],
             offset_x: 0.0,
@@ -30,9 +37,23 @@ impl ElementManager {
     }
 
     pub(crate) fn create_element_with_defs_id(&mut self, container: &Element, id: &str) -> usize {
-        let element = self.document.get_element_by_id(id).unwrap().clone();
+        // TODO
+        // get_element_by_idして、違う親に append_child すると、それは要素の移動になる！！！
+        // (元のJSからそう…）
+        container
+            .append_child(
+                &self
+                    .document
+                    .get_element_by_id(id)
+                    .unwrap()
+                    .clone_node()
+                    .unwrap(),
+            )
+            .unwrap();
+        let children = container.children();
+        let children_length = children.length();
+        let element = children.item(children_length - 1).unwrap();
         element.set_id("");
-        container.append_child(&*element).unwrap();
         self.elements.push(element);
         self.elements.len() - 1
     }

@@ -97,14 +97,171 @@ pub(crate) struct Figure {
 }
 
 impl Figure {
-    pub(crate) fn new_window_dev(element_manager: &mut ElementManager) -> Figure {
-        let container = element_manager
-            .document
-            .get_element_by_id("container")
-            .unwrap();
+    pub(crate) fn new_log_window_dev(element_manager: &mut ElementManager) -> Figure {
+        let container = element_manager.get_container();
         let (clip_path_index_1, clip_path_element_index_1) =
             element_manager.create_clip_path(&container);
-        let mut table_content_state = TableContentState::new();
+        let mut table_content_state = TableContentState::new("log");
+        table_content_state.tbody_data = vec![
+            vec![
+                StringBinder::new_with_str("行動順"),
+                StringBinder::new_with_str("後攻"),
+            ],
+            vec![
+                StringBinder::new_with_str("HP/MHP"),
+                StringBinder::new_with_str("50/50"),
+            ],
+            vec![
+                StringBinder::new_with_str("被ダメ"),
+                StringBinder::new_with_str("5"),
+            ],
+        ];
+        table_content_state.tbody_column_styles = vec![
+            ColumnStyle {
+                defs_id: "".to_string(),
+                text_anchor_type: TextAnchorType::Start,
+                x: 5.0,
+                font_size: 20.0,
+                first_y: 25.0,
+                dy: 25.0,
+            },
+            ColumnStyle {
+                defs_id: "".to_string(),
+                text_anchor_type: TextAnchorType::End,
+                x: 205.0,
+                font_size: 20.0,
+                first_y: 25.0,
+                dy: 25.0,
+            },
+        ];
+        Figure {
+            base_rect: BaseRect {
+                x_amounts: vec![Amount::new(50.0), Amount::new(1050.0)],
+                y_amounts: vec![Amount::new(700.0), Amount::new(790.0)],
+                width: RectLength {
+                    min: 120.0,
+                    max: 0.0,
+                    default: 0.0,
+                    amount: Amount::new(1000.0),
+                    is_fixed: false,
+                },
+                height: RectLength {
+                    min: 60.0,
+                    max: 0.0,
+                    default: 0.0,
+                    amount: Amount::new(90.0),
+                    is_fixed: false,
+                },
+                color: "gray".to_string(),
+                part_type: PartType::Expand,
+                is_grabbed: false,
+                x_fixed: false,
+                y_fixed: false,
+                element_index: element_manager
+                    .create_element_with_defs_id(&container, "def-default-window-base"),
+            },
+            parts: vec![
+                PartRect {
+                    x_amounts: vec![(5.0, Start), (-5.0, End)],
+                    y_amounts: vec![(30.0, Start), (-5.0, End)],
+                    color: "white".to_string(),
+                    element_index: element_manager.create_element(&container),
+                    part_type: PartType::Ignore,
+                    is_grabbed: false,
+                    internal_part_rect: vec![],
+                },
+                PartRect {
+                    x_amounts: vec![(5.0, Start), (-5.0, End)],
+                    y_amounts: vec![(30.0, Start), (-5.0, End)],
+                    color: "white".to_string(),
+                    element_index: element_manager.create_element(&container),
+                    part_type: PartType::Scrollable,
+                    is_grabbed: false,
+                    internal_part_rect: vec![
+                        PartRect {
+                            x_amounts: vec![(5.0, Start), (5.0, Start)],
+                            y_amounts: vec![(30.0, Start), (30.0, Start)],
+                            color: "orange".to_string(),
+                            element_index: element_manager
+                                .create_element_with_clip_path(&container, clip_path_index_1),
+                            part_type: PartType::TableContent(table_content_state),
+                            is_grabbed: false,
+                            internal_part_rect: vec![],
+                        },
+                        PartRect {
+                            x_amounts: vec![(5.0, Start), (0.0, Ignore)],
+                            y_amounts: vec![(-15.0, End), (-5.0, End)],
+                            color: "".to_string(),
+                            element_index: element_manager.create_element_with_defs_id(
+                                &container,
+                                "def-default-scroll-bar-x",
+                            ),
+                            part_type: PartType::ScrollBarX(ScrollBarState::new()),
+                            is_grabbed: false,
+                            internal_part_rect: vec![],
+                        },
+                        PartRect {
+                            x_amounts: vec![(-15.0, End), (-5.0, End)],
+                            y_amounts: vec![(30.0, Start), (0.0, Ignore)],
+                            color: "".to_string(),
+                            element_index: element_manager.create_element_with_defs_id(
+                                &container,
+                                "def-default-scroll-bar-y",
+                            ),
+                            part_type: PartType::ScrollBarY(ScrollBarState::new()),
+                            is_grabbed: false,
+                            internal_part_rect: vec![],
+                        },
+                        PartRect {
+                            x_amounts: vec![(5.0, Start), (-5.0, End)],
+                            y_amounts: vec![(30.0, Start), (-5.0, End)],
+                            color: "white".to_string(),
+                            element_index: clip_path_element_index_1,
+                            part_type: PartType::ClipPath,
+                            is_grabbed: false,
+                            internal_part_rect: vec![],
+                        },
+                    ],
+                },
+                PartRect {
+                    x_amounts: vec![(5.0, Start), (-55.0, End)],
+                    y_amounts: vec![(5.0, Start), (30.0, Start)],
+                    color: "".to_string(),
+                    element_index: element_manager.create_element_with_defs_id(
+                        &container,
+                        "def-default-window-title-background",
+                    ),
+                    part_type: PartType::Drag,
+                    is_grabbed: false,
+                    internal_part_rect: vec![],
+                },
+                PartRect {
+                    x_amounts: vec![(-25.0, End), (-5.0, End)],
+                    y_amounts: vec![(5.0, Start), (25.0, Start)],
+                    color: "white".to_string(),
+                    element_index: element_manager.create_element(&container),
+                    part_type: PartType::Ignore,
+                    is_grabbed: false,
+                    internal_part_rect: vec![],
+                },
+                PartRect {
+                    x_amounts: vec![(-50.0, End), (-30.0, End)],
+                    y_amounts: vec![(5.0, Start), (25.0, Start)],
+                    color: "white".to_string(),
+                    element_index: element_manager.create_element(&container),
+                    part_type: PartType::Ignore,
+                    is_grabbed: false,
+                    internal_part_rect: vec![],
+                },
+            ],
+            is_grabbed: false,
+        }
+    }
+    pub(crate) fn new_window_dev(element_manager: &mut ElementManager) -> Figure {
+        let container = element_manager.get_container();
+        let (clip_path_index_1, clip_path_element_index_1) =
+            element_manager.create_clip_path(&container);
+        let mut table_content_state = TableContentState::new("status");
         table_content_state.tbody_data = vec![
             vec![
                 StringBinder::new_with_str("行動順"),
@@ -230,7 +387,16 @@ impl Figure {
                     internal_part_rect: vec![],
                 },
                 PartRect {
-                    x_amounts: vec![(5.0, Start), (-30.0, End)],
+                    x_amounts: vec![(-50.0, End), (-30.0, End)],
+                    y_amounts: vec![(5.0, Start), (25.0, Start)],
+                    color: "white".to_string(),
+                    element_index: element_manager.create_element(&container),
+                    part_type: PartType::Ignore,
+                    is_grabbed: false,
+                    internal_part_rect: vec![],
+                },
+                PartRect {
+                    x_amounts: vec![(5.0, Start), (-55.0, End)],
                     y_amounts: vec![(5.0, Start), (30.0, Start)],
                     color: "".to_string(),
                     element_index: element_manager.create_element_with_defs_id(

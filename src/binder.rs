@@ -21,7 +21,7 @@ impl Binder {
         let binder = Binder {
             figures: vec![],
             mouse_state: MouseState::new(),
-            element_manager: ElementManager::new(),
+            element_manager: ElementManager::new("container"),
             has_update: false,
         };
         binder.adjust();
@@ -29,9 +29,12 @@ impl Binder {
     }
     #[wasm_bindgen(constructor)]
     pub fn new_for_dev() -> Binder {
-        let mut element_manager = ElementManager::new();
+        let mut element_manager = ElementManager::new("container");
         let binder = Binder {
-            figures: vec![Figure::new_window_dev(&mut element_manager)],
+            figures: vec![
+                Figure::new_window_dev(&mut element_manager),
+                Figure::new_log_window_dev(&mut element_manager),
+            ],
             mouse_state: MouseState::new(),
             element_manager,
             has_update: false,

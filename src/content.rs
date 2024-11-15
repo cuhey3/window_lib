@@ -8,17 +8,17 @@ pub(crate) struct TableContentState {
     thead_column_styles: Vec<ColumnStyle>,
     pub(crate) tbody_data: Vec<Vec<StringBinder>>,
     pub(crate) tbody_column_styles: Vec<ColumnStyle>,
-    content_id_token: String,
+    pub(crate) content_id_token: String,
 }
 
 impl TableContentState {
-    pub(crate) fn new() -> TableContentState {
+    pub(crate) fn new(token: &str) -> TableContentState {
         TableContentState {
             thead_data: vec![],
             thead_column_styles: vec![],
             tbody_data: vec![],
             tbody_column_styles: vec![],
-            content_id_token: "".to_string(),
+            content_id_token: token.to_string(),
         }
     }
     pub(crate) fn init(&self, element_manager: &ElementManager, table_container: &Element) {
@@ -145,6 +145,9 @@ pub(crate) struct ColumnStyle {
 
 impl ColumnStyle {
     fn get_element_by_defs_id(&self, document: &Document) -> Element {
+        // TODO
+        // この実装はうまく動きません
+        // なぜならclone()では要素が移動してしまうから
         let element = document
             .get_element_by_id(self.defs_id.as_str())
             .unwrap()

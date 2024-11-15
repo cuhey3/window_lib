@@ -207,7 +207,7 @@ impl PartRect {
                     let sibling_group = element_manager.elements[internal.element_index]
                         .next_element_sibling()
                         .unwrap();
-                    sibling_group.set_inner_html(format!("<clipPath id='clip-path-test'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect)).as_str());
+                    sibling_group.set_inner_html(format!("<clipPath id='clip-path-table-content-{}'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", table_content_state.content_id_token, -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect)).as_str());
                     table_content_state.init(element_manager, &sibling_group);
                     table_content_x += self.x_value(base_rect);
                     table_content_y += self.y_value(base_rect);
@@ -218,7 +218,14 @@ impl PartRect {
                         )
                         .unwrap();
                     sibling_group
-                        .set_attribute("clip-path", "url(#clip-path-test)")
+                        .set_attribute(
+                            "clip-path",
+                            format!(
+                                "url(#clip-path-table-content-{})",
+                                table_content_state.content_id_token
+                            )
+                            .as_str(),
+                        )
                         .unwrap();
                 }
             }
