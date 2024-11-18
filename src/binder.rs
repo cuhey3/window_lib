@@ -61,13 +61,23 @@ impl Binder {
             self.mouse_up();
         }
         // 現状、一度につかめる Figure は一つだけ
-        // Figure の重なりは考慮していない（先頭の一つがつかまれる）
-        if let Some(found_figure) = self.figures.iter_mut().find(|figure| figure.is_inner(x, y)) {
+        // TODO
+        // element_manager 上の group_index と、binder の figures の index が一致しているという前提に基づいたロジック
+        // figure の作成順と g 要素登録順がズレるとバグる（そんなケースありますか？）
+        if let Some(group_index) = self
+            .element_manager
+            .figure_group_order
+            .iter()
+            .find(|group_index| self.figures[**group_index].is_inner(x, y))
+        {
+            let found_figure = &mut self.figures[*group_index];
+            self.element_manager
+                .re_append_figure(found_figure.group_index);
             if found_figure.grab(x, y) {
                 self.mouse_state.is_dragged = true;
                 self.mouse_state.drag_start_point = Point { x, y };
             };
-        };
+        }
         self.has_update = true;
     }
 

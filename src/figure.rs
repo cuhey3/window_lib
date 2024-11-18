@@ -94,11 +94,14 @@ pub(crate) struct Figure {
     pub(crate) base_rect: BaseRect,
     pub(crate) parts: Vec<PartRect>,
     pub(crate) is_grabbed: bool,
+    pub(crate) group_index: usize,
 }
 
 impl Figure {
     pub(crate) fn new_log_window_dev(element_manager: &mut ElementManager) -> Figure {
         let container = element_manager.get_container();
+        let group_index = element_manager.create_figure_group(&container);
+        let container = &mut element_manager.figure_groups[group_index].clone();
         let (clip_path_index_1, clip_path_element_index_1) =
             element_manager.create_clip_path(&container);
         let mut table_content_state = TableContentState::new("log");
@@ -255,10 +258,15 @@ impl Figure {
                 },
             ],
             is_grabbed: false,
+            group_index,
         }
     }
     pub(crate) fn new_window_dev(element_manager: &mut ElementManager) -> Figure {
         let container = element_manager.get_container();
+        let group_index = element_manager.create_figure_group(&container);
+        // TODO
+        // clone しなくてよくはならないか
+        let container = &mut element_manager.figure_groups[group_index].clone();
         let (clip_path_index_1, clip_path_element_index_1) =
             element_manager.create_clip_path(&container);
         let mut table_content_state = TableContentState::new("status");
@@ -409,6 +417,7 @@ impl Figure {
                 },
             ],
             is_grabbed: false,
+            group_index,
         }
     }
     pub(crate) fn update_base(&mut self) {

@@ -152,7 +152,7 @@ impl ColumnStyle {
             .get_element_by_id(self.defs_id.as_str())
             .unwrap()
             .clone();
-        element.set_id("");
+        element.remove_attribute("id").unwrap();
         element
     }
 }

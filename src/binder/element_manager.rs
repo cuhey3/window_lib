@@ -7,6 +7,8 @@ pub(crate) struct ElementManager {
     pub(crate) offset_x: f64,
     pub(crate) offset_y: f64,
     pub(crate) scale: f64,
+    pub(crate) figure_groups: Vec<Element>,
+    pub(crate) figure_group_order: Vec<usize>,
 }
 
 impl ElementManager {
@@ -24,8 +26,39 @@ impl ElementManager {
             offset_x: 0.0,
             offset_y: 0.0,
             scale: 1.0,
+            figure_groups: vec![],
+            figure_group_order: vec![],
         }
     }
+
+    pub(crate) fn re_append_figure(&mut self, group_index: usize) {
+        let temporary_id = "temporary_id_re_append_figure";
+        self.figure_groups[group_index].set_id(temporary_id);
+        if let Some((index, _)) = self
+            .figure_group_order
+            .iter()
+            .enumerate()
+            .find(|(index, value)| **value == group_index)
+        {
+            self.figure_group_order.remove(index);
+            self.figure_group_order.insert(0, group_index);
+        };
+        let element = self.document.get_element_by_id(temporary_id).unwrap();
+        element.remove_attribute("id").unwrap();
+        self.get_container().append_child(&*element).unwrap();
+    }
+    pub(crate) fn create_figure_group(&mut self, container: &Element) -> usize {
+        let group = self
+            .document
+            .create_element_ns(Option::from("http://www.w3.org/2000/svg"), "g")
+            .unwrap();
+        container.append_child(&*group).unwrap();
+        self.figure_groups.push(group);
+        let group_index = self.figure_groups.len() - 1;
+        self.figure_group_order.push(group_index);
+        group_index
+    }
+
     pub(crate) fn create_element(&mut self, container: &Element) -> usize {
         let rect = self
             .document
@@ -53,7 +86,7 @@ impl ElementManager {
         let children = container.children();
         let children_length = children.length();
         let element = children.item(children_length - 1).unwrap();
-        element.set_id("");
+        element.remove_attribute("id").unwrap();
         self.elements.push(element);
         self.elements.len() - 1
     }
