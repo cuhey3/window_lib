@@ -4,6 +4,7 @@ use crate::figure::part_rect::PartRect;
 use crate::figure::AmountPositionType::{End, Ignore, Start};
 use crate::math::{Amount, Point};
 use base_rect::BaseRect;
+use wasm_bindgen_test::console_log;
 
 mod base_rect;
 pub(crate) mod part_rect;
@@ -95,16 +96,37 @@ pub(crate) struct Figure {
     pub(crate) parts: Vec<PartRect>,
     pub(crate) is_grabbed: bool,
     pub(crate) group_index: usize,
+    pub(crate) x_amount: Amount,
+    pub(crate) y_amount: Amount,
 }
 
 impl Figure {
-    pub(crate) fn new_log_window_dev(element_manager: &mut ElementManager) -> Figure {
+    pub(crate) fn adjust(&self, element_manager: &ElementManager) {
+        let group_element = &element_manager.figure_groups[self.group_index];
+        group_element
+            .set_attribute(
+                "transform",
+                format!(
+                    "translate({}, {})",
+                    self.x_amount.value(),
+                    self.y_amount.value()
+                )
+                .as_str(),
+            )
+            .unwrap()
+    }
+    pub(crate) fn new_log_window_dev(
+        element_manager: &mut ElementManager,
+        table_content_token: &str,
+    ) -> Figure {
         let container = element_manager.get_container();
         let group_index = element_manager.create_figure_group(&container);
-        let container = &mut element_manager.figure_groups[group_index].clone();
+        // TODO
+        // clone しなくてよくはならないか
+        let group_element = &mut element_manager.figure_groups[group_index].clone();
         let (clip_path_index_1, clip_path_element_index_1) =
-            element_manager.create_clip_path(&container);
-        let mut table_content_state = TableContentState::new("log");
+            element_manager.create_clip_path(&group_element);
+        let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
                 StringBinder::new_with_str("行動順"),
@@ -139,8 +161,8 @@ impl Figure {
         ];
         Figure {
             base_rect: BaseRect {
-                x_amounts: vec![Amount::new(50.0), Amount::new(1050.0)],
-                y_amounts: vec![Amount::new(700.0), Amount::new(790.0)],
+                x_amounts: vec![Amount::new(0.0), Amount::new(1000.0)],
+                y_amounts: vec![Amount::new(0.0), Amount::new(90.0)],
                 width: RectLength {
                     min: 120.0,
                     max: 0.0,
@@ -161,23 +183,14 @@ impl Figure {
                 x_fixed: false,
                 y_fixed: false,
                 element_index: element_manager
-                    .create_element_with_defs_id(&container, "def-default-window-base"),
+                    .create_element_with_defs_id(&group_element, "def-default-window-base"),
             },
             parts: vec![
                 PartRect {
                     x_amounts: vec![(5.0, Start), (-5.0, End)],
                     y_amounts: vec![(30.0, Start), (-5.0, End)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
-                    part_type: PartType::Ignore,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
-                PartRect {
-                    x_amounts: vec![(5.0, Start), (-5.0, End)],
-                    y_amounts: vec![(30.0, Start), (-5.0, End)],
-                    color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
+                    element_index: element_manager.create_element(&group_element),
                     part_type: PartType::Scrollable,
                     is_grabbed: false,
                     internal_part_rect: vec![
@@ -186,7 +199,7 @@ impl Figure {
                             y_amounts: vec![(30.0, Start), (30.0, Start)],
                             color: "orange".to_string(),
                             element_index: element_manager
-                                .create_element_with_clip_path(&container, clip_path_index_1),
+                                .create_element_with_clip_path(&group_element, clip_path_index_1),
                             part_type: PartType::TableContent(table_content_state),
                             is_grabbed: false,
                             internal_part_rect: vec![],
@@ -196,7 +209,7 @@ impl Figure {
                             y_amounts: vec![(-15.0, End), (-5.0, End)],
                             color: "".to_string(),
                             element_index: element_manager.create_element_with_defs_id(
-                                &container,
+                                &group_element,
                                 "def-default-scroll-bar-x",
                             ),
                             part_type: PartType::ScrollBarX(ScrollBarState::new()),
@@ -208,7 +221,7 @@ impl Figure {
                             y_amounts: vec![(30.0, Start), (0.0, Ignore)],
                             color: "".to_string(),
                             element_index: element_manager.create_element_with_defs_id(
-                                &container,
+                                &group_element,
                                 "def-default-scroll-bar-y",
                             ),
                             part_type: PartType::ScrollBarY(ScrollBarState::new()),
@@ -231,7 +244,7 @@ impl Figure {
                     y_amounts: vec![(5.0, Start), (30.0, Start)],
                     color: "".to_string(),
                     element_index: element_manager.create_element_with_defs_id(
-                        &container,
+                        &group_element,
                         "def-default-window-title-background",
                     ),
                     part_type: PartType::Drag,
@@ -242,7 +255,7 @@ impl Figure {
                     x_amounts: vec![(-25.0, End), (-5.0, End)],
                     y_amounts: vec![(5.0, Start), (25.0, Start)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
+                    element_index: element_manager.create_element(&group_element),
                     part_type: PartType::Ignore,
                     is_grabbed: false,
                     internal_part_rect: vec![],
@@ -251,7 +264,7 @@ impl Figure {
                     x_amounts: vec![(-50.0, End), (-30.0, End)],
                     y_amounts: vec![(5.0, Start), (25.0, Start)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
+                    element_index: element_manager.create_element(&group_element),
                     part_type: PartType::Ignore,
                     is_grabbed: false,
                     internal_part_rect: vec![],
@@ -259,17 +272,22 @@ impl Figure {
             ],
             is_grabbed: false,
             group_index,
+            x_amount: Amount::new(50.0),
+            y_amount: Amount::new(700.0),
         }
     }
-    pub(crate) fn new_window_dev(element_manager: &mut ElementManager) -> Figure {
+    pub(crate) fn new_window_dev(
+        element_manager: &mut ElementManager,
+        table_content_token: &str,
+    ) -> Figure {
         let container = element_manager.get_container();
         let group_index = element_manager.create_figure_group(&container);
         // TODO
         // clone しなくてよくはならないか
-        let container = &mut element_manager.figure_groups[group_index].clone();
+        let group_element = &mut element_manager.figure_groups[group_index].clone();
         let (clip_path_index_1, clip_path_element_index_1) =
-            element_manager.create_clip_path(&container);
-        let mut table_content_state = TableContentState::new("status");
+            element_manager.create_clip_path(&group_element);
+        let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
                 StringBinder::new_with_str("行動順"),
@@ -304,8 +322,8 @@ impl Figure {
         ];
         Figure {
             base_rect: BaseRect {
-                x_amounts: vec![Amount::new(100.0), Amount::new(300.0)],
-                y_amounts: vec![Amount::new(100.0), Amount::new(400.0)],
+                x_amounts: vec![Amount::new(0.0), Amount::new(200.0)],
+                y_amounts: vec![Amount::new(0.0), Amount::new(300.0)],
                 width: RectLength {
                     min: 80.0,
                     max: 0.0,
@@ -322,7 +340,7 @@ impl Figure {
                 },
                 color: "".to_string(),
                 element_index: element_manager
-                    .create_element_with_defs_id(&container, "def-default-window-base"),
+                    .create_element_with_defs_id(&group_element, "def-default-window-base"),
                 is_grabbed: false,
                 x_fixed: false,
                 y_fixed: false,
@@ -336,7 +354,7 @@ impl Figure {
                     x_amounts: vec![(5.0, Start), (-5.0, End)],
                     y_amounts: vec![(30.0, Start), (-5.0, End)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
+                    element_index: element_manager.create_element(&group_element),
                     part_type: PartType::Scrollable,
                     is_grabbed: false,
                     internal_part_rect: vec![
@@ -345,7 +363,7 @@ impl Figure {
                             y_amounts: vec![(30.0, Start), (30.0, Start)],
                             color: "orange".to_string(),
                             element_index: element_manager
-                                .create_element_with_clip_path(&container, clip_path_index_1),
+                                .create_element_with_clip_path(&group_element, clip_path_index_1),
                             part_type: PartType::TableContent(table_content_state),
                             is_grabbed: false,
                             internal_part_rect: vec![],
@@ -355,7 +373,7 @@ impl Figure {
                             y_amounts: vec![(-15.0, End), (-5.0, End)],
                             color: "".to_string(),
                             element_index: element_manager.create_element_with_defs_id(
-                                &container,
+                                &group_element,
                                 "def-default-scroll-bar-x",
                             ),
                             part_type: PartType::ScrollBarX(ScrollBarState::new()),
@@ -367,7 +385,7 @@ impl Figure {
                             y_amounts: vec![(30.0, Start), (0.0, Ignore)],
                             color: "".to_string(),
                             element_index: element_manager.create_element_with_defs_id(
-                                &container,
+                                &group_element,
                                 "def-default-scroll-bar-y",
                             ),
                             part_type: PartType::ScrollBarY(ScrollBarState::new()),
@@ -389,7 +407,7 @@ impl Figure {
                     x_amounts: vec![(-25.0, End), (-5.0, End)],
                     y_amounts: vec![(5.0, Start), (25.0, Start)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
+                    element_index: element_manager.create_element(&group_element),
                     part_type: PartType::Ignore,
                     is_grabbed: false,
                     internal_part_rect: vec![],
@@ -398,7 +416,7 @@ impl Figure {
                     x_amounts: vec![(-50.0, End), (-30.0, End)],
                     y_amounts: vec![(5.0, Start), (25.0, Start)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&container),
+                    element_index: element_manager.create_element(&group_element),
                     part_type: PartType::Ignore,
                     is_grabbed: false,
                     internal_part_rect: vec![],
@@ -408,7 +426,7 @@ impl Figure {
                     y_amounts: vec![(5.0, Start), (30.0, Start)],
                     color: "".to_string(),
                     element_index: element_manager.create_element_with_defs_id(
-                        &container,
+                        &group_element,
                         "def-default-window-title-background",
                     ),
                     part_type: PartType::Drag,
@@ -418,12 +436,16 @@ impl Figure {
             ],
             is_grabbed: false,
             group_index,
+            x_amount: Amount::new(100.0),
+            y_amount: Amount::new(100.0),
         }
     }
     pub(crate) fn update_base(&mut self) {
         if !self.is_grabbed {
             return;
         }
+        self.x_amount.update_base();
+        self.y_amount.update_base();
         self.base_rect.update_base();
         self.base_rect.is_grabbed = false;
         self.is_grabbed = false;
@@ -431,14 +453,15 @@ impl Figure {
             parts.update_base();
         }
     }
-    pub(crate) fn grab(&mut self, x: f64, y: f64) -> bool {
+    pub(crate) fn grab(&mut self, raw_x: f64, raw_y: f64) -> bool {
+        let x = raw_x - self.x_amount.value();
+        let y = raw_y - self.y_amount.value();
         // 自分を更新しながら part_rect.is_inner で base_rect を参照しているので clone 不可避
         let clone = self.base_rect.clone();
-        if let Some(found_parts) = self
-            .parts
-            .iter_mut()
-            .find(|parts| parts.is_inner(x, y, &clone))
-        {
+        if let Some(found_parts) = self.parts.iter_mut().find(|parts| {
+            let result = parts.is_inner(x, y, &clone);
+            result
+        }) {
             self.is_grabbed = found_parts.grab(x, y, &clone)
         } else {
             self.base_rect.is_grabbed = true;
@@ -449,17 +472,23 @@ impl Figure {
 
     pub(crate) fn move_xy(
         &mut self,
-        drag_start_point: &Point,
+        raw_drag_start_point: &Point,
         delta_point: &Point,
         element_manager: &ElementManager,
     ) {
         if self.is_grabbed {
+            let drag_start_point = &Point {
+                x: raw_drag_start_point.x - self.x_amount.base,
+                y: raw_drag_start_point.y - self.y_amount.base,
+            };
             if let Some(parts) = self.parts.iter_mut().find(|parts| parts.is_grabbed) {
                 let parent_width = parts.width_value(&self.base_rect);
                 let parent_height = parts.height_value(&self.base_rect);
                 if let PartType::Drag = parts.part_type {
-                    self.base_rect
-                        .move_xy(&drag_start_point, &delta_point, true);
+                    self.x_amount.delta = delta_point.x;
+                    self.y_amount.delta = delta_point.y;
+                    // self.base_rect
+                    //     .move_xy(&drag_start_point, &delta_point, true);
                 } else if let PartType::Scrollable = parts.part_type {
                     if let Some(internal) = parts
                         .internal_part_rect
@@ -540,7 +569,9 @@ impl Figure {
         }
     }
 
-    pub(crate) fn is_inner(&self, x: f64, y: f64) -> bool {
+    pub(crate) fn is_inner(&self, raw_x: f64, raw_y: f64) -> bool {
+        let x = raw_x - self.x_amount.value();
+        let y = raw_y - self.y_amount.value();
         // base_rect からはみ出している PartRect がない前提の実装
         let x_value = self.base_rect.x_value();
         // マウスポインターの形が変わっても領域外だったりするので

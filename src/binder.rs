@@ -32,8 +32,9 @@ impl Binder {
         let mut element_manager = ElementManager::new("container");
         let binder = Binder {
             figures: vec![
-                Figure::new_window_dev(&mut element_manager),
-                Figure::new_log_window_dev(&mut element_manager),
+                Figure::new_window_dev(&mut element_manager, "status1"),
+                Figure::new_window_dev(&mut element_manager, "status2"),
+                Figure::new_log_window_dev(&mut element_manager, "log"),
             ],
             mouse_state: MouseState::new(),
             element_manager,
@@ -112,6 +113,7 @@ impl Binder {
 impl Binder {
     pub(crate) fn adjust(&self) {
         for figure in self.figures.iter() {
+            figure.adjust(&self.element_manager);
             figure.base_rect.adjust(&self.element_manager);
             for part_rect in figure.parts.iter() {
                 part_rect.adjust(&figure.base_rect, &self.element_manager);
