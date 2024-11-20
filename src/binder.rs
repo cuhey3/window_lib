@@ -3,7 +3,6 @@ use crate::binder::mouse_state::MouseState;
 use crate::figure::Figure;
 use crate::math::Point;
 use wasm_bindgen::prelude::wasm_bindgen;
-use wasm_bindgen_test::console_log;
 
 pub(crate) mod element_manager;
 mod mouse_state;
@@ -19,7 +18,7 @@ pub struct Binder {
 #[wasm_bindgen]
 impl Binder {
     pub fn new() -> Binder {
-        let binder = Binder {
+        let mut binder = Binder {
             figures: vec![],
             mouse_state: MouseState::new(),
             element_manager: ElementManager::new("container"),
@@ -31,11 +30,11 @@ impl Binder {
     #[wasm_bindgen(constructor)]
     pub fn new_for_dev() -> Binder {
         let mut element_manager = ElementManager::new("container");
-        let binder = Binder {
+        let mut binder = Binder {
             figures: vec![
-                Figure::new_window_dev(&mut element_manager, "status1", "gray"),
-                Figure::new_window_dev(&mut element_manager, "status2", "gray"),
-                Figure::new_log_window_dev(&mut element_manager, "log", "gray"),
+                Figure::new_window_dev(100.0, 100.0, "gray", "status1", &mut element_manager),
+                Figure::new_window_dev(300.0, 300.0, "gray", "status2", &mut element_manager),
+                Figure::new_log_window_dev(50.0, 700.0, "gray", "log", &mut element_manager),
             ],
             mouse_state: MouseState::new(),
             element_manager,
@@ -112,21 +111,21 @@ impl Binder {
 }
 
 impl Binder {
-    pub(crate) fn adjust(&self) {
-        for figure in self.figures.iter() {
+    pub(crate) fn adjust(&mut self) {
+        for figure in self.figures.iter_mut() {
             figure.adjust(&self.element_manager);
-            figure.base_rect.adjust(&self.element_manager);
-            for part_rect in figure.parts.iter() {
-                part_rect.adjust(&figure.base_rect, &self.element_manager);
+            figure.base_rect.adjust(&mut self.element_manager);
+            for part_rect in figure.parts.iter_mut() {
+                part_rect.adjust(&figure.base_rect, &mut self.element_manager);
             }
         }
     }
-    pub(crate) fn initial_adjust(&self) {
-        for figure in self.figures.iter() {
+    pub(crate) fn initial_adjust(&mut self) {
+        for figure in self.figures.iter_mut() {
             figure.adjust(&self.element_manager);
             figure.base_rect.initial_adjust(&self.element_manager);
-            for part_rect in figure.parts.iter() {
-                part_rect.adjust(&figure.base_rect, &self.element_manager);
+            for part_rect in figure.parts.iter_mut() {
+                part_rect.adjust(&figure.base_rect, &mut self.element_manager);
             }
         }
     }

@@ -1,7 +1,7 @@
 use crate::binder::element_manager::ElementManager;
 use crate::content::{ColumnStyle, StringBinder, TableContentState, TextAnchorType};
 use crate::figure::part_rect::PartRect;
-use crate::figure::AmountPositionType::{End, Ignore, Start};
+use crate::figure::AmountPositionType::{End, Start};
 use crate::math::{Amount, Point};
 use base_rect::BaseRect;
 
@@ -30,8 +30,18 @@ impl RectLength {
             self.amount.delta = self.min - self.amount.base;
         }
     }
+    pub(crate) fn new_with_min(length: f64, min_length: f64) -> RectLength {
+        RectLength {
+            min: min_length,
+            max: 0.0,
+            default: 0.0,
+            amount: Amount::new(length),
+            is_fixed: false,
+        }
+    }
 }
 
+#[derive(Clone)]
 pub(crate) enum AmountPositionType {
     Start,
     End,
@@ -48,7 +58,6 @@ pub(crate) enum PartType {
     ScrollBarX(ScrollBarState),
     ScrollBarY(ScrollBarState),
     TableContent(TableContentState),
-    ClipPath,
 }
 
 #[derive(Clone, Debug)]
@@ -113,15 +122,14 @@ impl Figure {
             .unwrap()
     }
     pub(crate) fn new_log_window_dev(
-        element_manager: &mut ElementManager,
-        table_content_token: &str,
+        x: f64,
+        y: f64,
         frame_color: &str,
+        table_content_token: &str,
+        element_manager: &mut ElementManager,
     ) -> Figure {
         let container = element_manager.get_container();
         let group_index = element_manager.create_figure_group(&container);
-        // TODO
-        // clone しなくてよくはならないか
-        let group_element = &mut element_manager.figure_groups[group_index].clone();
         let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
@@ -155,123 +163,28 @@ impl Figure {
                 dy: 25.0,
             },
         ];
-        Figure {
-            base_rect: BaseRect {
-                x_amount: Amount::new(50.0),
-                y_amount: Amount::new(700.0),
-                width: RectLength {
-                    min: 120.0,
-                    max: 0.0,
-                    default: 0.0,
-                    amount: Amount::new(1000.0),
-                    is_fixed: false,
-                },
-                height: RectLength {
-                    min: 60.0,
-                    max: 0.0,
-                    default: 0.0,
-                    amount: Amount::new(90.0),
-                    is_fixed: false,
-                },
-                color: frame_color.to_string(),
-                part_type: PartType::Expand,
-                is_grabbed: false,
-                x_fixed: false,
-                y_fixed: false,
-                element_index: element_manager
-                    .create_element_with_defs_id(&group_element, "def-default-window-base"),
-            },
-            parts: vec![
-                PartRect {
-                    x_amounts: vec![(5.0, Start), (-5.0, End)],
-                    y_amounts: vec![(30.0, Start), (-5.0, End)],
-                    color: "white".to_string(),
-                    element_index: element_manager
-                        .create_element_with_defs_id(&group_element, "def-default-scroll-area"),
-                    part_type: PartType::Scrollable,
-                    is_grabbed: false,
-                    internal_part_rect: vec![
-                        PartRect {
-                            x_amounts: vec![(5.0, Start), (5.0, Start)],
-                            y_amounts: vec![(30.0, Start), (30.0, Start)],
-                            color: "".to_string(),
-                            element_index: element_manager
-                                .create_element_with_group(&group_element),
-                            part_type: PartType::TableContent(table_content_state),
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
-                        PartRect {
-                            x_amounts: vec![(5.0, Start), (0.0, Ignore)],
-                            y_amounts: vec![(-15.0, End), (-5.0, End)],
-                            color: "".to_string(),
-                            element_index: element_manager.create_element_with_defs_id(
-                                &group_element,
-                                "def-default-scroll-bar-x",
-                            ),
-                            part_type: PartType::ScrollBarX(ScrollBarState::new()),
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
-                        PartRect {
-                            x_amounts: vec![(-15.0, End), (-5.0, End)],
-                            y_amounts: vec![(30.0, Start), (0.0, Ignore)],
-                            color: "".to_string(),
-                            element_index: element_manager.create_element_with_defs_id(
-                                &group_element,
-                                "def-default-scroll-bar-y",
-                            ),
-                            part_type: PartType::ScrollBarY(ScrollBarState::new()),
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
-                    ],
-                },
-                PartRect {
-                    x_amounts: vec![(5.0, Start), (-55.0, End)],
-                    y_amounts: vec![(5.0, Start), (30.0, Start)],
-                    color: frame_color.to_string(),
-                    element_index: element_manager.create_element_with_defs_id(
-                        &group_element,
-                        "def-default-window-title-background",
-                    ),
-                    part_type: PartType::Drag,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
-                PartRect {
-                    x_amounts: vec![(-25.0, End), (-5.0, End)],
-                    y_amounts: vec![(5.0, Start), (25.0, Start)],
-                    color: "white".to_string(),
-                    element_index: element_manager.create_element(&group_element),
-                    part_type: PartType::Ignore,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
-                PartRect {
-                    x_amounts: vec![(-50.0, End), (-30.0, End)],
-                    y_amounts: vec![(5.0, Start), (25.0, Start)],
-                    color: "white".to_string(),
-                    element_index: element_manager.create_element(&group_element),
-                    part_type: PartType::Ignore,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
-            ],
-            is_grabbed: false,
+        Figure::default_window(
+            x,
+            y,
+            RectLength::new_with_min(1000.0, 120.0),
+            RectLength::new_with_min(90.0, 60.0),
+            frame_color,
+            5.0,
+            25.0,
+            PartType::TableContent(table_content_state),
+            element_manager,
             group_index,
-        }
+        )
     }
     pub(crate) fn new_window_dev(
-        element_manager: &mut ElementManager,
-        table_content_token: &str,
+        x: f64,
+        y: f64,
         frame_color: &str,
+        table_content_token: &str,
+        element_manager: &mut ElementManager,
     ) -> Figure {
         let container = element_manager.get_container();
         let group_index = element_manager.create_figure_group(&container);
-        // TODO
-        // clone しなくてよくはならないか
-        let group_element = &mut element_manager.figure_groups[group_index].clone();
         let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
@@ -305,24 +218,44 @@ impl Figure {
                 dy: 25.0,
             },
         ];
+        Figure::default_window(
+            x,
+            y,
+            RectLength::new_with_min(200.0, 80.0),
+            RectLength::new_with_min(300.0, 80.0),
+            frame_color,
+            5.0,
+            25.0,
+            PartType::TableContent(table_content_state),
+            element_manager,
+            group_index,
+        )
+    }
+    pub(crate) fn default_window(
+        start_x: f64,
+        start_y: f64,
+        width: RectLength,
+        height: RectLength,
+        frame_color: &str,
+        margin: f64,
+        title_height: f64,
+        content_part_type: PartType,
+        element_manager: &mut ElementManager,
+        group_index: usize,
+    ) -> Figure {
+        let offset_x = 0.0;
+        let offset_y = title_height;
+        let scroll_bar_thickness = 10.0;
+        let button_size = 20.0;
+        // TODO
+        // clone しなくてよくはならないか
+        let group_element = &mut element_manager.figure_groups[group_index].clone();
         Figure {
             base_rect: BaseRect {
-                x_amount: Amount::new(100.0),
-                y_amount: Amount::new(100.0),
-                width: RectLength {
-                    min: 80.0,
-                    max: 0.0,
-                    default: 0.0,
-                    amount: Amount::new(200.0),
-                    is_fixed: false,
-                },
-                height: RectLength {
-                    min: 80.0,
-                    max: 0.0,
-                    default: 0.0,
-                    amount: Amount::new(300.0),
-                    is_fixed: false,
-                },
+                x_amount: Amount::new(start_x),
+                y_amount: Amount::new(start_y),
+                width,
+                height,
                 color: frame_color.to_string(),
                 element_index: element_manager
                     .create_element_with_defs_id(&group_element, "def-default-window-base"),
@@ -335,86 +268,45 @@ impl Figure {
                 part_type: PartType::Expand,
             },
             parts: vec![
-                PartRect {
-                    x_amounts: vec![(5.0, Start), (-5.0, End)],
-                    y_amounts: vec![(30.0, Start), (-5.0, End)],
-                    color: "white".to_string(),
-                    element_index: element_manager
-                        .create_element_with_defs_id(&group_element, "def-default-scroll-area"),
-                    part_type: PartType::Scrollable,
-                    is_grabbed: false,
-                    internal_part_rect: vec![
-                        PartRect {
-                            x_amounts: vec![(5.0, Start), (5.0, Start)],
-                            y_amounts: vec![(30.0, Start), (30.0, Start)],
-                            color: "".to_string(),
-                            element_index: element_manager
-                                .create_element_with_group(&group_element),
-                            part_type: PartType::TableContent(table_content_state),
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
-                        PartRect {
-                            x_amounts: vec![(5.0, Start), (0.0, Ignore)],
-                            y_amounts: vec![(-15.0, End), (-5.0, End)],
-                            color: "".to_string(),
-                            element_index: element_manager.create_element_with_defs_id(
-                                &group_element,
-                                "def-default-scroll-bar-x",
-                            ),
-                            part_type: PartType::ScrollBarX(ScrollBarState::new()),
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
-                        PartRect {
-                            x_amounts: vec![(-15.0, End), (-5.0, End)],
-                            y_amounts: vec![(30.0, Start), (0.0, Ignore)],
-                            color: "".to_string(),
-                            element_index: element_manager.create_element_with_defs_id(
-                                &group_element,
-                                "def-default-scroll-bar-y",
-                            ),
-                            part_type: PartType::ScrollBarY(ScrollBarState::new()),
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
-                    ],
-                },
-                PartRect {
-                    x_amounts: vec![(-25.0, End), (-5.0, End)],
-                    y_amounts: vec![(5.0, Start), (25.0, Start)],
-                    color: "white".to_string(),
-                    element_index: element_manager.create_element(&group_element),
-                    part_type: PartType::Ignore,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
-                PartRect {
-                    x_amounts: vec![(-50.0, End), (-30.0, End)],
-                    y_amounts: vec![(5.0, Start), (25.0, Start)],
-                    color: "white".to_string(),
-                    element_index: element_manager.create_element(&group_element),
-                    part_type: PartType::Ignore,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
-                PartRect {
-                    x_amounts: vec![(5.0, Start), (-55.0, End)],
-                    y_amounts: vec![(5.0, Start), (30.0, Start)],
-                    color: frame_color.to_string(),
-                    element_index: element_manager.create_element_with_defs_id(
+                PartRect::default_scrollable(
+                    margin,
+                    offset_x,
+                    offset_y,
+                    scroll_bar_thickness,
+                    "white",
+                    content_part_type,
+                    element_manager,
+                    group_element,
+                ),
+                PartRect::default_title_bg(
+                    margin,
+                    offset_y,
+                    frame_color,
+                    element_manager.create_element_with_defs_id(
                         &group_element,
                         "def-default-window-title-background",
                     ),
-                    part_type: PartType::Drag,
-                    is_grabbed: false,
-                    internal_part_rect: vec![],
-                },
+                ),
+                PartRect::default_button(
+                    (-margin - button_size, End),
+                    (margin, Start),
+                    button_size,
+                    "white",
+                    element_manager.create_element(&group_element),
+                ),
+                PartRect::default_button(
+                    (-margin - button_size - margin - button_size, End),
+                    (margin, Start),
+                    button_size,
+                    "white",
+                    element_manager.create_element(&group_element),
+                ),
             ],
             is_grabbed: false,
             group_index,
         }
     }
+
     pub(crate) fn update_base(&mut self) {
         if !self.is_grabbed {
             return;
@@ -496,9 +388,7 @@ impl Figure {
                     let scrollable_height = parts.height_value(&self.base_rect);
                     for internal in parts.internal_part_rect.iter() {
                         match internal.part_type {
-                            PartType::ScrollBarX(..)
-                            | PartType::ScrollBarY(..)
-                            | PartType::ClipPath => {}
+                            PartType::ScrollBarX(..) | PartType::ScrollBarY(..) => {}
                             _ => {
                                 internal_max_width =
                                     internal_max_width.max(internal.width_value(&self.base_rect));

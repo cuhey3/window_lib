@@ -1,8 +1,7 @@
 use crate::binder::element_manager::ElementManager;
 use crate::figure::base_rect::BaseRect;
 use crate::figure::AmountPositionType::{ContentBase, End, Ignore, Start};
-use crate::figure::{AmountPositionType, PartType};
-use wasm_bindgen_test::console_log;
+use crate::figure::{AmountPositionType, PartType, ScrollBarState};
 use web_sys::Element;
 
 pub(crate) struct PartRect {
@@ -13,9 +12,143 @@ pub(crate) struct PartRect {
     pub(crate) part_type: PartType,
     pub(crate) is_grabbed: bool,
     pub(crate) internal_part_rect: Vec<PartRect>,
+    pub(crate) is_initialized: bool,
 }
 
 impl PartRect {
+    pub(crate) fn default_scrollable(
+        margin: f64,
+        offset_x: f64,
+        offset_y: f64,
+        thickness: f64,
+        color: &str,
+        content_part_type: PartType,
+        element_manager: &mut ElementManager,
+        group_element: &Element,
+    ) -> PartRect {
+        PartRect {
+            x_amounts: vec![(margin + offset_x, Start), (-margin, End)],
+            y_amounts: vec![(margin + offset_y, Start), (-margin, End)],
+            color: color.to_string(),
+            element_index: element_manager
+                .create_element_with_defs_id(group_element, "def-default-scroll-area"),
+            part_type: PartType::Scrollable,
+            is_grabbed: false,
+            internal_part_rect: vec![
+                PartRect::default_content(
+                    margin,
+                    0.0,
+                    offset_y,
+                    content_part_type,
+                    element_manager.create_element_with_group(group_element),
+                ),
+                PartRect::default_scroll_bar_xy(
+                    thickness,
+                    margin,
+                    offset_x,
+                    PartType::ScrollBarX(ScrollBarState::new()),
+                    "",
+                    element_manager
+                        .create_element_with_defs_id(&group_element, "def-default-scroll-bar-x"),
+                ),
+                PartRect::default_scroll_bar_xy(
+                    thickness,
+                    margin,
+                    offset_y,
+                    PartType::ScrollBarY(ScrollBarState::new()),
+                    "",
+                    element_manager
+                        .create_element_with_defs_id(&group_element, "def-default-scroll-bar-y"),
+                ),
+            ],
+            is_initialized: false,
+        }
+    }
+    pub(crate) fn default_content(
+        margin: f64,
+        offset_x: f64,
+        offset_y: f64,
+        part_type: PartType,
+        element_index: usize,
+    ) -> PartRect {
+        PartRect {
+            x_amounts: vec![(margin + offset_x, Start), (0.0, Ignore)],
+            y_amounts: vec![(margin + offset_y, Start), (0.0, Ignore)],
+            color: "".to_string(),
+            element_index,
+            part_type,
+            is_grabbed: false,
+            internal_part_rect: vec![],
+            is_initialized: false,
+        }
+    }
+    pub(crate) fn default_scroll_bar_xy(
+        thickness: f64,
+        margin: f64,
+        offset: f64,
+        part_type: PartType,
+        color: &str,
+        element_index: usize,
+    ) -> PartRect {
+        match part_type {
+            PartType::ScrollBarX(..) => PartRect {
+                x_amounts: vec![(margin + offset, Start), (0.0, Ignore)],
+                y_amounts: vec![(-margin - thickness, End), (-margin, End)],
+                color: color.to_string(),
+                element_index,
+                part_type,
+                is_grabbed: false,
+                internal_part_rect: vec![],
+                is_initialized: false,
+            },
+            PartType::ScrollBarY(..) => PartRect {
+                x_amounts: vec![(-margin - thickness, End), (-margin, End)],
+                y_amounts: vec![(margin + offset, Start), (0.0, Ignore)],
+                color: color.to_string(),
+                element_index,
+                part_type,
+                is_grabbed: false,
+                internal_part_rect: vec![],
+                is_initialized: false,
+            },
+            _ => panic!(),
+        }
+    }
+    pub(crate) fn default_title_bg(
+        margin: f64,
+        bg_height: f64,
+        color: &str,
+        element_index: usize,
+    ) -> PartRect {
+        PartRect {
+            x_amounts: vec![(margin, Start), (-margin, End)],
+            y_amounts: vec![(margin, Start), (margin + bg_height, Start)],
+            color: color.to_string(),
+            element_index,
+            part_type: PartType::Drag,
+            is_grabbed: false,
+            internal_part_rect: vec![],
+            is_initialized: false,
+        }
+    }
+    pub(crate) fn default_button(
+        x_amount: (f64, AmountPositionType),
+        y_amount: (f64, AmountPositionType),
+        size: f64,
+        color: &str,
+        element_index: usize,
+    ) -> PartRect {
+        PartRect {
+            x_amounts: vec![x_amount.clone(), (x_amount.0 + size, x_amount.1)],
+            y_amounts: vec![y_amount.clone(), (y_amount.0 + size, y_amount.1)],
+            color: color.to_string(),
+            element_index,
+            part_type: PartType::Ignore,
+            is_grabbed: false,
+            internal_part_rect: vec![],
+            is_initialized: false,
+        }
+    }
     pub(crate) fn update_base(&mut self) {
         if !self.is_grabbed {
             return;
@@ -37,7 +170,6 @@ impl PartRect {
     pub(crate) fn grab(&mut self, x: f64, y: f64, base_rect: &BaseRect) -> bool {
         self.is_grabbed = match self.part_type {
             PartType::Ignore
-            | PartType::ClipPath
             // ScrollBarX, ScrollBarY は、直接は grab できず、
             // Scrollable の internal_pert_rect でのみ grab できる
             | PartType::ScrollBarX(..)
@@ -71,10 +203,13 @@ impl PartRect {
         };
         self.is_grabbed
     }
-    pub(crate) fn adjust(&self, base_rect: &BaseRect, element_manager: &ElementManager) {
+    pub(crate) fn adjust(&mut self, base_rect: &BaseRect, element_manager: &mut ElementManager) {
         let element = &element_manager.elements[self.element_index];
-        if !self.color.is_empty() {
-            element.set_attribute("fill", self.color.as_str()).unwrap();
+        if !self.is_initialized {
+            if !self.color.is_empty() {
+                element.set_attribute("fill", self.color.as_str()).unwrap();
+            }
+            self.is_initialized = true;
         }
         element
             .set_attribute("x", self.x_value(base_rect).to_string().as_str())
@@ -88,7 +223,7 @@ impl PartRect {
         element
             .set_attribute("height", self.height_value(base_rect).to_string().as_str())
             .unwrap();
-        for internal in self.internal_part_rect.iter() {
+        for internal in self.internal_part_rect.iter_mut() {
             internal.adjust(base_rect, element_manager);
         }
         if let PartType::Scrollable = self.part_type {

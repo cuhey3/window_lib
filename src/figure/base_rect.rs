@@ -108,7 +108,7 @@ impl BaseRect {
         self.height.fix();
     }
 
-    pub(crate) fn adjust(&self, element_manager: &ElementManager) {
+    pub(crate) fn adjust(&mut self, element_manager: &mut ElementManager) {
         let element = &element_manager.elements[self.element_index];
         element
             .set_attribute("width", self.width_value().to_string().as_str())
