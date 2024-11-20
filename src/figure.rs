@@ -4,7 +4,6 @@ use crate::figure::part_rect::PartRect;
 use crate::figure::AmountPositionType::{End, Ignore, Start};
 use crate::math::{Amount, Point};
 use base_rect::BaseRect;
-use wasm_bindgen_test::console_log;
 
 mod base_rect;
 pub(crate) mod part_rect;
@@ -96,8 +95,6 @@ pub(crate) struct Figure {
     pub(crate) parts: Vec<PartRect>,
     pub(crate) is_grabbed: bool,
     pub(crate) group_index: usize,
-    pub(crate) x_amount: Amount,
-    pub(crate) y_amount: Amount,
 }
 
 impl Figure {
@@ -108,8 +105,8 @@ impl Figure {
                 "transform",
                 format!(
                     "translate({}, {})",
-                    self.x_amount.value(),
-                    self.y_amount.value()
+                    self.base_rect.x_amount.value(),
+                    self.base_rect.y_amount.value()
                 )
                 .as_str(),
             )
@@ -161,8 +158,8 @@ impl Figure {
         ];
         Figure {
             base_rect: BaseRect {
-                x_amounts: vec![Amount::new(0.0), Amount::new(1000.0)],
-                y_amounts: vec![Amount::new(0.0), Amount::new(90.0)],
+                x_amount: Amount::new(50.0),
+                y_amount: Amount::new(700.0),
                 width: RectLength {
                     min: 120.0,
                     max: 0.0,
@@ -272,8 +269,6 @@ impl Figure {
             ],
             is_grabbed: false,
             group_index,
-            x_amount: Amount::new(50.0),
-            y_amount: Amount::new(700.0),
         }
     }
     pub(crate) fn new_window_dev(
@@ -322,8 +317,8 @@ impl Figure {
         ];
         Figure {
             base_rect: BaseRect {
-                x_amounts: vec![Amount::new(0.0), Amount::new(200.0)],
-                y_amounts: vec![Amount::new(0.0), Amount::new(300.0)],
+                x_amount: Amount::new(100.0),
+                y_amount: Amount::new(100.0),
                 width: RectLength {
                     min: 80.0,
                     max: 0.0,
@@ -436,16 +431,12 @@ impl Figure {
             ],
             is_grabbed: false,
             group_index,
-            x_amount: Amount::new(100.0),
-            y_amount: Amount::new(100.0),
         }
     }
     pub(crate) fn update_base(&mut self) {
         if !self.is_grabbed {
             return;
         }
-        self.x_amount.update_base();
-        self.y_amount.update_base();
         self.base_rect.update_base();
         self.base_rect.is_grabbed = false;
         self.is_grabbed = false;
@@ -454,8 +445,8 @@ impl Figure {
         }
     }
     pub(crate) fn grab(&mut self, raw_x: f64, raw_y: f64) -> bool {
-        let x = raw_x - self.x_amount.value();
-        let y = raw_y - self.y_amount.value();
+        let x = raw_x - self.base_rect.x_amount.value();
+        let y = raw_y - self.base_rect.y_amount.value();
         // 自分を更新しながら part_rect.is_inner で base_rect を参照しているので clone 不可避
         let clone = self.base_rect.clone();
         if let Some(found_parts) = self.parts.iter_mut().find(|parts| {
@@ -478,17 +469,15 @@ impl Figure {
     ) {
         if self.is_grabbed {
             let drag_start_point = &Point {
-                x: raw_drag_start_point.x - self.x_amount.base,
-                y: raw_drag_start_point.y - self.y_amount.base,
+                x: raw_drag_start_point.x - self.base_rect.x_amount.base,
+                y: raw_drag_start_point.y - self.base_rect.y_amount.base,
             };
             if let Some(parts) = self.parts.iter_mut().find(|parts| parts.is_grabbed) {
                 let parent_width = parts.width_value(&self.base_rect);
                 let parent_height = parts.height_value(&self.base_rect);
                 if let PartType::Drag = parts.part_type {
-                    self.x_amount.delta = delta_point.x;
-                    self.y_amount.delta = delta_point.y;
-                    // self.base_rect
-                    //     .move_xy(&drag_start_point, &delta_point, true);
+                    self.base_rect
+                        .move_xy(&drag_start_point, &delta_point, true);
                 } else if let PartType::Scrollable = parts.part_type {
                     if let Some(internal) = parts
                         .internal_part_rect
@@ -570,8 +559,8 @@ impl Figure {
     }
 
     pub(crate) fn is_inner(&self, raw_x: f64, raw_y: f64) -> bool {
-        let x = raw_x - self.x_amount.value();
-        let y = raw_y - self.y_amount.value();
+        let x = raw_x - self.base_rect.x_amount.value();
+        let y = raw_y - self.base_rect.y_amount.value();
         // base_rect からはみ出している PartRect がない前提の実装
         let x_value = self.base_rect.x_value();
         // マウスポインターの形が変わっても領域外だったりするので

@@ -38,7 +38,7 @@ impl ElementManager {
             .figure_group_order
             .iter()
             .enumerate()
-            .find(|(index, value)| **value == group_index)
+            .find(|(_, value)| **value == group_index)
         {
             self.figure_group_order.remove(index);
             self.figure_group_order.insert(0, group_index);

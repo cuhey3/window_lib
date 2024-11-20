@@ -2,7 +2,6 @@ use crate::binder::element_manager::ElementManager;
 use crate::figure::base_rect::BaseRect;
 use crate::figure::AmountPositionType::{ContentBase, End, Ignore, Start};
 use crate::figure::{AmountPositionType, PartType};
-use wasm_bindgen_test::console_log;
 
 pub(crate) struct PartRect {
     pub(crate) x_amounts: Vec<(f64, AmountPositionType)>,

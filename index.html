@@ -103,7 +103,14 @@
         }
     };
     document.onmousemove = (event) => binder.mouse_move(...getXY(event));
-    function animate() {
+    const stepArray = [];
+    function animate(step) {
+        if (step - stepArray[0] > 1000) {
+            // fps計測
+            // console.log(stepArray.length);
+            stepArray.splice(0);
+        }
+        stepArray.push(step);
         binder.update();
         window.requestAnimationFrame(animate);
     }

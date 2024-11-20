@@ -24,7 +24,7 @@ impl Binder {
             element_manager: ElementManager::new("container"),
             has_update: false,
         };
-        binder.adjust();
+        binder.initial_adjust();
         binder
     }
     #[wasm_bindgen(constructor)]
@@ -40,7 +40,7 @@ impl Binder {
             element_manager,
             has_update: false,
         };
-        binder.adjust();
+        binder.initial_adjust();
         binder
     }
     pub fn update(&mut self) {
@@ -115,6 +115,15 @@ impl Binder {
         for figure in self.figures.iter() {
             figure.adjust(&self.element_manager);
             figure.base_rect.adjust(&self.element_manager);
+            for part_rect in figure.parts.iter() {
+                part_rect.adjust(&figure.base_rect, &self.element_manager);
+            }
+        }
+    }
+    pub(crate) fn initial_adjust(&self) {
+        for figure in self.figures.iter() {
+            figure.adjust(&self.element_manager);
+            figure.base_rect.initial_adjust(&self.element_manager);
             for part_rect in figure.parts.iter() {
                 part_rect.adjust(&figure.base_rect, &self.element_manager);
             }
