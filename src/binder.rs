@@ -3,6 +3,7 @@ use crate::binder::mouse_state::MouseState;
 use crate::figure::Figure;
 use crate::math::Point;
 use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen_test::console_log;
 
 pub(crate) mod element_manager;
 mod mouse_state;
@@ -32,9 +33,9 @@ impl Binder {
         let mut element_manager = ElementManager::new("container");
         let binder = Binder {
             figures: vec![
-                Figure::new_window_dev(&mut element_manager, "status1"),
-                Figure::new_window_dev(&mut element_manager, "status2"),
-                Figure::new_log_window_dev(&mut element_manager, "log"),
+                Figure::new_window_dev(&mut element_manager, "status1", "gray"),
+                Figure::new_window_dev(&mut element_manager, "status2", "gray"),
+                Figure::new_log_window_dev(&mut element_manager, "log", "gray"),
             ],
             mouse_state: MouseState::new(),
             element_manager,

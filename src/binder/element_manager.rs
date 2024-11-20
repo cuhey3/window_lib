@@ -114,6 +114,20 @@ impl ElementManager {
         self.elements.len() - 1
     }
 
+    pub(crate) fn create_element_with_group(&mut self, container: &Element) -> usize {
+        let rect = self
+            .document
+            .create_element_ns(Option::from("http://www.w3.org/2000/svg"), "rect")
+            .unwrap();
+        container.append_child(&*rect).unwrap();
+        let g = self
+            .document
+            .create_element_ns(Option::from("http://www.w3.org/2000/svg"), "g")
+            .unwrap();
+        container.append_child(&*g).unwrap();
+        self.elements.push(rect);
+        self.elements.len() - 1
+    }
     pub(crate) fn create_clip_path(&mut self, container: &Element) -> (usize, usize) {
         let clip_path = self
             .document

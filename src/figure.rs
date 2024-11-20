@@ -115,14 +115,13 @@ impl Figure {
     pub(crate) fn new_log_window_dev(
         element_manager: &mut ElementManager,
         table_content_token: &str,
+        frame_color: &str,
     ) -> Figure {
         let container = element_manager.get_container();
         let group_index = element_manager.create_figure_group(&container);
         // TODO
         // clone しなくてよくはならないか
         let group_element = &mut element_manager.figure_groups[group_index].clone();
-        let (clip_path_index_1, clip_path_element_index_1) =
-            element_manager.create_clip_path(&group_element);
         let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
@@ -174,7 +173,7 @@ impl Figure {
                     amount: Amount::new(90.0),
                     is_fixed: false,
                 },
-                color: "gray".to_string(),
+                color: frame_color.to_string(),
                 part_type: PartType::Expand,
                 is_grabbed: false,
                 x_fixed: false,
@@ -187,16 +186,17 @@ impl Figure {
                     x_amounts: vec![(5.0, Start), (-5.0, End)],
                     y_amounts: vec![(30.0, Start), (-5.0, End)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&group_element),
+                    element_index: element_manager
+                        .create_element_with_defs_id(&group_element, "def-default-scroll-area"),
                     part_type: PartType::Scrollable,
                     is_grabbed: false,
                     internal_part_rect: vec![
                         PartRect {
                             x_amounts: vec![(5.0, Start), (5.0, Start)],
                             y_amounts: vec![(30.0, Start), (30.0, Start)],
-                            color: "orange".to_string(),
+                            color: "".to_string(),
                             element_index: element_manager
-                                .create_element_with_clip_path(&group_element, clip_path_index_1),
+                                .create_element_with_group(&group_element),
                             part_type: PartType::TableContent(table_content_state),
                             is_grabbed: false,
                             internal_part_rect: vec![],
@@ -225,21 +225,12 @@ impl Figure {
                             is_grabbed: false,
                             internal_part_rect: vec![],
                         },
-                        PartRect {
-                            x_amounts: vec![(5.0, Start), (-5.0, End)],
-                            y_amounts: vec![(30.0, Start), (-5.0, End)],
-                            color: "white".to_string(),
-                            element_index: clip_path_element_index_1,
-                            part_type: PartType::ClipPath,
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
                     ],
                 },
                 PartRect {
                     x_amounts: vec![(5.0, Start), (-55.0, End)],
                     y_amounts: vec![(5.0, Start), (30.0, Start)],
-                    color: "".to_string(),
+                    color: frame_color.to_string(),
                     element_index: element_manager.create_element_with_defs_id(
                         &group_element,
                         "def-default-window-title-background",
@@ -274,14 +265,13 @@ impl Figure {
     pub(crate) fn new_window_dev(
         element_manager: &mut ElementManager,
         table_content_token: &str,
+        frame_color: &str,
     ) -> Figure {
         let container = element_manager.get_container();
         let group_index = element_manager.create_figure_group(&container);
         // TODO
         // clone しなくてよくはならないか
         let group_element = &mut element_manager.figure_groups[group_index].clone();
-        let (clip_path_index_1, clip_path_element_index_1) =
-            element_manager.create_clip_path(&group_element);
         let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
@@ -333,7 +323,7 @@ impl Figure {
                     amount: Amount::new(300.0),
                     is_fixed: false,
                 },
-                color: "".to_string(),
+                color: frame_color.to_string(),
                 element_index: element_manager
                     .create_element_with_defs_id(&group_element, "def-default-window-base"),
                 is_grabbed: false,
@@ -349,16 +339,17 @@ impl Figure {
                     x_amounts: vec![(5.0, Start), (-5.0, End)],
                     y_amounts: vec![(30.0, Start), (-5.0, End)],
                     color: "white".to_string(),
-                    element_index: element_manager.create_element(&group_element),
+                    element_index: element_manager
+                        .create_element_with_defs_id(&group_element, "def-default-scroll-area"),
                     part_type: PartType::Scrollable,
                     is_grabbed: false,
                     internal_part_rect: vec![
                         PartRect {
                             x_amounts: vec![(5.0, Start), (5.0, Start)],
                             y_amounts: vec![(30.0, Start), (30.0, Start)],
-                            color: "orange".to_string(),
+                            color: "".to_string(),
                             element_index: element_manager
-                                .create_element_with_clip_path(&group_element, clip_path_index_1),
+                                .create_element_with_group(&group_element),
                             part_type: PartType::TableContent(table_content_state),
                             is_grabbed: false,
                             internal_part_rect: vec![],
@@ -387,15 +378,6 @@ impl Figure {
                             is_grabbed: false,
                             internal_part_rect: vec![],
                         },
-                        PartRect {
-                            x_amounts: vec![(5.0, Start), (-5.0, End)],
-                            y_amounts: vec![(30.0, Start), (-5.0, End)],
-                            color: "white".to_string(),
-                            element_index: clip_path_element_index_1,
-                            part_type: PartType::ClipPath,
-                            is_grabbed: false,
-                            internal_part_rect: vec![],
-                        },
                     ],
                 },
                 PartRect {
@@ -419,7 +401,7 @@ impl Figure {
                 PartRect {
                     x_amounts: vec![(5.0, Start), (-55.0, End)],
                     y_amounts: vec![(5.0, Start), (30.0, Start)],
-                    color: "".to_string(),
+                    color: frame_color.to_string(),
                     element_index: element_manager.create_element_with_defs_id(
                         &group_element,
                         "def-default-window-title-background",

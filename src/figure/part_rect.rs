@@ -2,6 +2,8 @@ use crate::binder::element_manager::ElementManager;
 use crate::figure::base_rect::BaseRect;
 use crate::figure::AmountPositionType::{ContentBase, End, Ignore, Start};
 use crate::figure::{AmountPositionType, PartType};
+use wasm_bindgen_test::console_log;
+use web_sys::Element;
 
 pub(crate) struct PartRect {
     pub(crate) x_amounts: Vec<(f64, AmountPositionType)>,
@@ -86,46 +88,27 @@ impl PartRect {
         element
             .set_attribute("height", self.height_value(base_rect).to_string().as_str())
             .unwrap();
-        let mut internal_max_width: f64 = 0.0;
-        let mut internal_max_height: f64 = 0.0;
-        let mut internal_max_width_element_index: usize = 0;
-        let mut internal_max_height_element_index: usize = 0;
         for internal in self.internal_part_rect.iter() {
             internal.adjust(base_rect, element_manager);
-            match internal.part_type {
-                PartType::ScrollBarX(..) | PartType::ScrollBarY(..) | PartType::ClipPath => {}
-                _ => {
-                    let mut sibling_g_width = 0.0;
-                    let mut sibling_g_height = 0.0;
-                    if let Some(sibling) =
-                        element_manager.elements[internal.element_index].next_element_sibling()
-                    {
-                        if sibling.tag_name() == "g" {
-                            sibling_g_width = sibling.get_bounding_client_rect().width()
-                                / element_manager.scale
-                                + 10.0;
-                            sibling_g_height = sibling.get_bounding_client_rect().height()
-                                / element_manager.scale
-                                + 10.0;
-                        }
-                    };
-
-                    if internal_max_width < internal.width_value(base_rect)
-                        || internal_max_width < sibling_g_width
-                    {
-                        internal_max_width = internal.width_value(base_rect).max(sibling_g_width);
-                        internal_max_width_element_index = internal.element_index;
-                    }
-                    if internal_max_height < internal.height_value(base_rect)
-                        || internal_max_height < sibling_g_height
-                    {
-                        internal_max_height =
-                            internal.height_value(base_rect).max(sibling_g_height);
-                        internal_max_height_element_index = internal.element_index;
-                    }
-                }
-            }
         }
+        if let PartType::Scrollable = self.part_type {
+            self.update_scrollable(base_rect, element_manager);
+        }
+    }
+
+    fn hide(&self, element_manager: &ElementManager) {
+        let element = &element_manager.elements[self.element_index];
+        element.set_attribute("width", "0").unwrap();
+    }
+
+    fn update_scrollable(&self, base_rect: &BaseRect, element_manager: &ElementManager) {
+        let (has_content, group_x, group_y, content_element_index) =
+            self.get_internal_content_size(element_manager);
+        if !has_content {
+            return;
+        }
+        let internal_max_width = group_x / element_manager.scale + 10.0;
+        let internal_max_height = group_y / element_manager.scale + 10.0;
         // TODO
         // 2値のハードコーディングをやめる
         let scroll_bar_x_height = 10.0;
@@ -137,103 +120,121 @@ impl PartRect {
         let height_ratio = internal_max_height / base_height;
         let height_ratio_with_bar = (internal_max_height + scroll_bar_x_height) / base_height;
         let threshold = 1.02;
-        if let PartType::Scrollable = self.part_type {
-            let mut table_content_x = 0.0;
-            let mut table_content_y = 0.0;
-            if width_ratio_with_bar <= threshold
-                || (width_ratio <= threshold && height_ratio <= threshold)
-            {
-                for internal in self.internal_part_rect.iter() {
-                    if let PartType::ScrollBarX(..) = internal.part_type {
-                        internal.hide(element_manager);
-                    }
-                }
-            } else {
-                for internal in self.internal_part_rect.iter() {
-                    if let PartType::ScrollBarX(scroll_bar_state) = &internal.part_type {
-                        let using_width_ratio = if height_ratio > threshold {
-                            width_ratio_with_bar
-                        } else {
-                            width_ratio
-                        };
-                        // let bar_width = self.width_value(base_rect) / using_width_ratio;
-                        let bar_width = scroll_bar_state.length;
-                        let max_delta = base_width - bar_width;
-                        let offset_max_width = internal_max_width - base_width;
-                        let offset_x =
-                            scroll_bar_state.start_amount.value() / max_delta * offset_max_width;
-                        let content = &element_manager.elements[internal_max_width_element_index];
-                        let content_x: f64 = content.get_attribute("x").unwrap().parse().unwrap();
-                        content
-                            .set_attribute("x", (content_x - offset_x).to_string().as_str())
-                            .unwrap();
-                        table_content_x -= offset_x;
-                    }
-                }
-            }
-            if height_ratio_with_bar <= threshold
-                || (width_ratio <= threshold && height_ratio <= threshold)
-            {
-                for internal in self.internal_part_rect.iter() {
-                    if let PartType::ScrollBarY(..) = internal.part_type {
-                        internal.hide(element_manager);
-                    }
-                }
-            } else {
-                for internal in self.internal_part_rect.iter() {
-                    if let PartType::ScrollBarY(scroll_bar_state) = &internal.part_type {
-                        let using_height_ratio = if width_ratio > threshold {
-                            height_ratio_with_bar
-                        } else {
-                            height_ratio
-                        };
-                        // let bar_height = self.height_value(base_rect) / using_height_ratio;
-                        let bar_height = scroll_bar_state.length;
-                        let max_delta = base_height - bar_height;
-                        let offset_max_height = internal_max_height - base_height;
-                        let offset_y =
-                            scroll_bar_state.start_amount.value() / max_delta * offset_max_height;
-                        let content = &element_manager.elements[internal_max_height_element_index];
-                        let content_y: f64 = content.get_attribute("y").unwrap().parse().unwrap();
-                        content
-                            .set_attribute("y", (content_y - offset_y).to_string().as_str())
-                            .unwrap();
-                        table_content_y -= offset_y;
-                    }
-                }
-            }
+        let mut table_content_x = 0.0;
+        let mut table_content_y = 0.0;
+        if width_ratio_with_bar <= threshold
+            || (width_ratio <= threshold && height_ratio <= threshold)
+        {
             for internal in self.internal_part_rect.iter() {
-                if let PartType::TableContent(table_content_state) = &internal.part_type {
-                    let sibling_group = element_manager.elements[internal.element_index]
-                        .next_element_sibling()
+                if let PartType::ScrollBarX(..) = internal.part_type {
+                    internal.hide(element_manager);
+                }
+            }
+        } else {
+            for internal in self.internal_part_rect.iter() {
+                if let PartType::ScrollBarX(scroll_bar_state) = &internal.part_type {
+                    let using_width_ratio = if height_ratio > threshold {
+                        width_ratio_with_bar
+                    } else {
+                        width_ratio
+                    };
+                    // let bar_width = self.width_value(base_rect) / using_width_ratio;
+                    let bar_width = scroll_bar_state.length;
+                    let max_delta = base_width - bar_width;
+                    let offset_max_width = internal_max_width - base_width;
+                    let offset_x =
+                        scroll_bar_state.start_amount.value() / max_delta * offset_max_width;
+                    let content = &element_manager.elements[content_element_index];
+                    let content_x: f64 = content.get_attribute("x").unwrap().parse().unwrap();
+                    content
+                        .set_attribute("x", (content_x - offset_x).to_string().as_str())
                         .unwrap();
-                    sibling_group.set_inner_html(format!("<clipPath id='clip-path-table-content-{}'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", table_content_state.content_id_token, -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect)).as_str());
-                    table_content_state.init(element_manager, &sibling_group);
-                    table_content_x += self.x_value(base_rect);
-                    table_content_y += self.y_value(base_rect);
-                    sibling_group
-                        .set_attribute(
-                            "transform",
-                            format!("translate({}, {})", table_content_x, table_content_y).as_str(),
-                        )
-                        .unwrap();
-                    sibling_group
-                        .set_attribute(
-                            "clip-path",
-                            format!(
-                                "url(#clip-path-table-content-{})",
-                                table_content_state.content_id_token
-                            )
-                            .as_str(),
-                        )
-                        .unwrap();
+                    table_content_x -= offset_x;
                 }
             }
         }
+        if height_ratio_with_bar <= threshold
+            || (width_ratio <= threshold && height_ratio <= threshold)
+        {
+            for internal in self.internal_part_rect.iter() {
+                if let PartType::ScrollBarY(..) = internal.part_type {
+                    internal.hide(element_manager);
+                }
+            }
+        } else {
+            for internal in self.internal_part_rect.iter() {
+                if let PartType::ScrollBarY(scroll_bar_state) = &internal.part_type {
+                    let using_height_ratio = if width_ratio > threshold {
+                        height_ratio_with_bar
+                    } else {
+                        height_ratio
+                    };
+                    // let bar_height = self.height_value(base_rect) / using_height_ratio;
+                    let bar_height = scroll_bar_state.length;
+                    let max_delta = base_height - bar_height;
+                    let offset_max_height = internal_max_height - base_height;
+                    let offset_y =
+                        scroll_bar_state.start_amount.value() / max_delta * offset_max_height;
+                    let content = &element_manager.elements[content_element_index];
+                    let content_y: f64 = content.get_attribute("y").unwrap().parse().unwrap();
+                    content
+                        .set_attribute("y", (content_y - offset_y).to_string().as_str())
+                        .unwrap();
+                    table_content_y -= offset_y;
+                }
+            }
+        }
+        for internal in self.internal_part_rect.iter() {
+            if let PartType::TableContent(table_content_state) = &internal.part_type {
+                let sibling_group = element_manager.elements[internal.element_index]
+                    .next_element_sibling()
+                    .unwrap();
+                sibling_group.set_inner_html(format!("<clipPath id='clip-path-table-content-{}'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", table_content_state.content_id_token, -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect)).as_str());
+                table_content_state.init(element_manager, &sibling_group);
+                table_content_x += self.x_value(base_rect);
+                table_content_y += self.y_value(base_rect);
+                sibling_group
+                    .set_attribute(
+                        "transform",
+                        format!("translate({}, {})", table_content_x, table_content_y).as_str(),
+                    )
+                    .unwrap();
+                sibling_group
+                    .set_attribute(
+                        "clip-path",
+                        format!(
+                            "url(#clip-path-table-content-{})",
+                            table_content_state.content_id_token
+                        )
+                        .as_str(),
+                    )
+                    .unwrap();
+            }
+        }
     }
-    fn hide(&self, element_manager: &ElementManager) {
-        let element = &element_manager.elements[self.element_index];
-        element.set_attribute("width", "0").unwrap();
+    fn get_internal_content_size(
+        &self,
+        element_manager: &ElementManager,
+    ) -> (bool, f64, f64, usize) {
+        let content_part = self.internal_part_rect.iter().find(|internal| {
+            if let PartType::TableContent(..) = internal.part_type {
+                true
+            } else {
+                false
+            }
+        });
+        if content_part.is_none() {
+            return (false, 0.0, 0.0, 0);
+        }
+        let found_content_part = content_part.unwrap();
+        let content_index = found_content_part.element_index;
+        if let Some(sibling) = element_manager.elements[content_index].next_element_sibling() {
+            if sibling.tag_name() == "g" {
+                let bounding = sibling.get_bounding_client_rect();
+                return (true, bounding.width(), bounding.height(), content_index);
+            }
+        }
+        (false, 0.0, 0.0, 0)
     }
 }
 
