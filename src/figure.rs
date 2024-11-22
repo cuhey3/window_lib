@@ -1,6 +1,6 @@
 use crate::binder::element_manager::ElementManager;
 use crate::content::{ColumnStyle, StringBinder, TableContentState, TextAnchorType};
-use crate::figure::part_rect::PartRect;
+use crate::figure::part_rect::{ButtonType, PartRect};
 use crate::figure::AmountPositionType::{End, Start};
 use crate::math::{Amount, Point};
 use base_rect::BaseRect;
@@ -52,6 +52,8 @@ pub(crate) enum AmountPositionType {
 #[derive(Clone, Debug)]
 pub(crate) enum PartType {
     Ignore,
+    Minimize,
+    ShowContent,
     Expand,
     Drag,
     Scrollable,
@@ -288,18 +290,22 @@ impl Figure {
                     ),
                 ),
                 PartRect::default_button(
-                    (-margin - button_size, End),
-                    (margin, Start),
-                    button_size,
-                    "white",
-                    element_manager.create_element(&group_element),
-                ),
-                PartRect::default_button(
                     (-margin - button_size - margin - button_size, End),
                     (margin, Start),
                     button_size,
                     "white",
-                    element_manager.create_element(&group_element),
+                    element_manager.create_element_with_group(&group_element),
+                    element_manager,
+                    ButtonType::Minimize,
+                ),
+                PartRect::default_button(
+                    (-margin - button_size, End),
+                    (margin, Start),
+                    button_size,
+                    "white",
+                    element_manager.create_element_with_group(&group_element),
+                    element_manager,
+                    ButtonType::ShowContent,
                 ),
             ],
             is_grabbed: false,

@@ -13,6 +13,7 @@ pub(crate) struct PartRect {
     pub(crate) is_grabbed: bool,
     pub(crate) internal_part_rect: Vec<PartRect>,
     pub(crate) is_initialized: bool,
+    pub(crate) has_content: bool,
 }
 
 impl PartRect {
@@ -62,6 +63,7 @@ impl PartRect {
                 ),
             ],
             is_initialized: false,
+            has_content: false,
         }
     }
     pub(crate) fn default_content(
@@ -80,6 +82,7 @@ impl PartRect {
             is_grabbed: false,
             internal_part_rect: vec![],
             is_initialized: false,
+            has_content: false,
         }
     }
     pub(crate) fn default_scroll_bar_xy(
@@ -100,6 +103,7 @@ impl PartRect {
                 is_grabbed: false,
                 internal_part_rect: vec![],
                 is_initialized: false,
+                has_content: false,
             },
             PartType::ScrollBarY(..) => PartRect {
                 x_amounts: vec![(-margin - thickness, End), (-margin, End)],
@@ -110,6 +114,7 @@ impl PartRect {
                 is_grabbed: false,
                 internal_part_rect: vec![],
                 is_initialized: false,
+                has_content: false,
             },
             _ => panic!(),
         }
@@ -129,6 +134,7 @@ impl PartRect {
             is_grabbed: false,
             internal_part_rect: vec![],
             is_initialized: false,
+            has_content: false,
         }
     }
     pub(crate) fn default_button(
@@ -137,7 +143,21 @@ impl PartRect {
         size: f64,
         color: &str,
         element_index: usize,
+        element_manager: &mut ElementManager,
+        button_type: ButtonType,
     ) -> PartRect {
+        match button_type {
+            ButtonType::Minimize => ButtonType::draw_button(
+                element_manager,
+                element_index,
+                "def-default-minimize-button",
+            ),
+            ButtonType::ShowContent => ButtonType::draw_button(
+                element_manager,
+                element_index,
+                "def-default-show-content-button",
+            ),
+        }
         PartRect {
             x_amounts: vec![x_amount.clone(), (x_amount.0 + size, x_amount.1)],
             y_amounts: vec![y_amount.clone(), (y_amount.0 + size, y_amount.1)],
@@ -147,6 +167,7 @@ impl PartRect {
             is_grabbed: false,
             internal_part_rect: vec![],
             is_initialized: false,
+            has_content: true,
         }
     }
     pub(crate) fn update_base(&mut self) {
@@ -170,6 +191,8 @@ impl PartRect {
     pub(crate) fn grab(&mut self, x: f64, y: f64, base_rect: &BaseRect) -> bool {
         self.is_grabbed = match self.part_type {
             PartType::Ignore
+            | PartType::Minimize
+            | PartType::ShowContent
             // ScrollBarX, ScrollBarY は、直接は grab できず、
             // Scrollable の internal_pert_rect でのみ grab できる
             | PartType::ScrollBarX(..)
@@ -211,18 +234,30 @@ impl PartRect {
             }
             self.is_initialized = true;
         }
-        element
-            .set_attribute("x", self.x_value(base_rect).to_string().as_str())
-            .unwrap();
-        element
-            .set_attribute("y", self.y_value(base_rect).to_string().as_str())
-            .unwrap();
+        let x_value = self.x_value(base_rect).to_string();
+        let y_value = self.y_value(base_rect).to_string();
+        element.set_attribute("x", x_value.as_str()).unwrap();
+        element.set_attribute("y", y_value.as_str()).unwrap();
         element
             .set_attribute("width", self.width_value(base_rect).to_string().as_str())
             .unwrap();
         element
             .set_attribute("height", self.height_value(base_rect).to_string().as_str())
             .unwrap();
+        if self.has_content {
+            if let Some(content_element) =
+                element_manager.elements[self.element_index].next_element_sibling()
+            {
+                if content_element.tag_name() == "g" {
+                    content_element
+                        .set_attribute(
+                            "transform",
+                            format!("translate({}, {})", x_value, y_value).as_str(),
+                        )
+                        .unwrap();
+                }
+            }
+        }
         for internal in self.internal_part_rect.iter_mut() {
             internal.adjust(base_rect, element_manager);
         }
@@ -442,6 +477,27 @@ impl PartRect {
                 base_rect.y_value() + base_rect.height_value() + amount - self.y_value(base_rect)
             }
             Ignore => 0.0,
+        }
+    }
+}
+
+pub enum ButtonType {
+    Minimize,
+    ShowContent,
+}
+
+impl ButtonType {
+    fn draw_button(element_manager: &mut ElementManager, element_index: usize, symbol_id: &str) {
+        let content_group = element_manager.elements[element_index]
+            .next_element_sibling()
+            .unwrap();
+        let symbol = element_manager
+            .document
+            .get_element_by_id(symbol_id)
+            .unwrap();
+        for n in 0..symbol.child_nodes().length() {
+            let node = symbol.child_nodes().item(n).unwrap().clone_node().unwrap();
+            content_group.append_child(&node).unwrap();
         }
     }
 }
