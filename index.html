@@ -99,14 +99,14 @@
     }
     document.onmouseup = (event) => {
         if (event.button === 0) {
-            binder.mouse_up();
+            binder.mouse_up(...getXY(event));
         }
     };
     document.onmousedown = (event) => {
         if (event.button === 0) {
             binder.mouse_down(...getXY(event));
         } else {
-            binder.mouse_up();
+            binder.mouse_up(...getXY(event));
         }
     };
     document.onmousemove = (event) => binder.mouse_move(...getXY(event));

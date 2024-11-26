@@ -1,7 +1,8 @@
 use crate::binder::element_manager::ElementManager;
 use crate::figure::base_rect::BaseRect;
 use crate::figure::AmountPositionType::{ContentBase, End, Ignore, Start};
-use crate::figure::{AmountPositionType, PartType, ScrollBarState};
+use crate::figure::{AmountPositionType, Figure, PartType, ScrollBarState};
+use crate::math::Amount;
 use web_sys::Element;
 
 pub(crate) struct PartRect {
@@ -11,6 +12,7 @@ pub(crate) struct PartRect {
     pub(crate) element_index: usize,
     pub(crate) part_type: PartType,
     pub(crate) is_grabbed: bool,
+    pub(crate) is_pushed: bool,
     pub(crate) internal_part_rect: Vec<PartRect>,
     pub(crate) is_initialized: bool,
     pub(crate) has_content: bool,
@@ -35,6 +37,7 @@ impl PartRect {
                 .create_element_with_defs_id(group_element, "def-default-scroll-area"),
             part_type: PartType::Scrollable,
             is_grabbed: false,
+            is_pushed: false,
             internal_part_rect: vec![
                 PartRect::default_content(
                     margin,
@@ -80,6 +83,7 @@ impl PartRect {
             element_index,
             part_type,
             is_grabbed: false,
+            is_pushed: false,
             internal_part_rect: vec![],
             is_initialized: false,
             has_content: false,
@@ -101,6 +105,7 @@ impl PartRect {
                 element_index,
                 part_type,
                 is_grabbed: false,
+                is_pushed: false,
                 internal_part_rect: vec![],
                 is_initialized: false,
                 has_content: false,
@@ -112,6 +117,7 @@ impl PartRect {
                 element_index,
                 part_type,
                 is_grabbed: false,
+                is_pushed: false,
                 internal_part_rect: vec![],
                 is_initialized: false,
                 has_content: false,
@@ -132,6 +138,7 @@ impl PartRect {
             element_index,
             part_type: PartType::Drag,
             is_grabbed: false,
+            is_pushed: false,
             internal_part_rect: vec![],
             is_initialized: false,
             has_content: false,
@@ -147,12 +154,12 @@ impl PartRect {
         button_type: ButtonType,
     ) -> PartRect {
         match button_type {
-            ButtonType::Minimize => ButtonType::draw_button(
+            ButtonType::Minimize(..) => ButtonType::draw_button(
                 element_manager,
                 element_index,
                 "def-default-minimize-button",
             ),
-            ButtonType::ShowContent => ButtonType::draw_button(
+            ButtonType::ShowContent(..) => ButtonType::draw_button(
                 element_manager,
                 element_index,
                 "def-default-show-content-button",
@@ -163,8 +170,9 @@ impl PartRect {
             y_amounts: vec![y_amount.clone(), (y_amount.0 + size, y_amount.1)],
             color: color.to_string(),
             element_index,
-            part_type: PartType::Ignore,
+            part_type: PartType::Button(button_type),
             is_grabbed: false,
+            is_pushed: false,
             internal_part_rect: vec![],
             is_initialized: false,
             has_content: true,
@@ -191,8 +199,6 @@ impl PartRect {
     pub(crate) fn grab(&mut self, x: f64, y: f64, base_rect: &BaseRect) -> bool {
         self.is_grabbed = match self.part_type {
             PartType::Ignore
-            | PartType::Minimize
-            | PartType::ShowContent
             // ScrollBarX, ScrollBarY は、直接は grab できず、
             // Scrollable の internal_pert_rect でのみ grab できる
             | PartType::ScrollBarX(..)
@@ -222,6 +228,10 @@ impl PartRect {
             }
             PartType::Expand | PartType::Drag => {
                 true
+            }
+            PartType::Button(_) => {
+                self.is_pushed = true;
+                false
             }
         };
         self.is_grabbed
@@ -382,7 +392,7 @@ impl PartRect {
             }
         }
     }
-    fn get_internal_content_size(
+    pub(crate) fn get_internal_content_size(
         &self,
         element_manager: &ElementManager,
     ) -> (bool, f64, f64, usize) {
@@ -409,7 +419,9 @@ impl PartRect {
 }
 
 impl PartRect {
-    pub(crate) fn is_inner(&self, x: f64, y: f64, base_rect: &BaseRect) -> bool {
+    pub(crate) fn is_inner(&self, raw_x: f64, raw_y: f64, base_rect: &BaseRect) -> bool {
+        let x = raw_x - base_rect.x_amount.value();
+        let y = raw_y - base_rect.y_amount.value();
         let x_value = self.x_value(base_rect);
         if x_value > x {
             return false;
@@ -480,10 +492,37 @@ impl PartRect {
         }
     }
 }
+#[derive(Clone, Debug)]
+pub(crate) struct ShowContentOption {}
 
+#[derive(Clone, Debug)]
+pub(crate) struct MinimizeOption {}
+
+impl ShowContentOption {
+    pub(crate) fn test_func(&self, figure: &mut Figure, element_manager: &ElementManager) {
+        let mut content_width = 0.0;
+        let mut content_height = 0.0;
+        if let Some(_) = figure.parts.iter().find(|parts| {
+            if let PartType::Scrollable = parts.part_type {
+                let (content_flag, width, height, ..) =
+                    parts.get_internal_content_size(element_manager);
+                content_width = width;
+                content_height = height;
+                content_flag
+            } else {
+                false
+            }
+        }) {
+            figure.base_rect.width.amount = Amount::new(content_width + 50.0);
+            figure.base_rect.height.amount = Amount::new(content_height + 60.0);
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum ButtonType {
-    Minimize,
-    ShowContent,
+    Minimize(MinimizeOption),
+    ShowContent(ShowContentOption),
 }
 
 impl ButtonType {

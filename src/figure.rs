@@ -1,6 +1,6 @@
 use crate::binder::element_manager::ElementManager;
 use crate::content::{ColumnStyle, StringBinder, TableContentState, TextAnchorType};
-use crate::figure::part_rect::{ButtonType, PartRect};
+use crate::figure::part_rect::{ButtonType, MinimizeOption, PartRect, ShowContentOption};
 use crate::figure::AmountPositionType::{End, Start};
 use crate::math::{Amount, Point};
 use base_rect::BaseRect;
@@ -52,8 +52,7 @@ pub(crate) enum AmountPositionType {
 #[derive(Clone, Debug)]
 pub(crate) enum PartType {
     Ignore,
-    Minimize,
-    ShowContent,
+    Button(ButtonType),
     Expand,
     Drag,
     Scrollable,
@@ -105,10 +104,30 @@ pub(crate) struct Figure {
     pub(crate) base_rect: BaseRect,
     pub(crate) parts: Vec<PartRect>,
     pub(crate) is_grabbed: bool,
+    pub(crate) is_pushed: bool,
     pub(crate) group_index: usize,
 }
 
 impl Figure {
+    pub(crate) fn button_pressed(&mut self, x: f64, y: f64, element_manager: &ElementManager) {
+        self.is_pushed = false;
+        let cloned_base_rect = self.base_rect.clone();
+        if let Some(found_parts) = self.parts.iter_mut().find(|parts| parts.is_pushed) {
+            found_parts.is_pushed = false;
+            if !found_parts.is_inner(x, y, &cloned_base_rect) {
+                return;
+            }
+            if let PartType::Button(button_type) = &found_parts.part_type {
+                match button_type.clone() {
+                    ButtonType::Minimize(_) => {}
+                    ButtonType::ShowContent(show_content_option) => {
+                        show_content_option.test_func(self, element_manager);
+                    }
+                }
+            }
+        };
+    }
+
     pub(crate) fn adjust(&self, element_manager: &ElementManager) {
         let group_element = &element_manager.figure_groups[self.group_index];
         group_element
@@ -296,7 +315,7 @@ impl Figure {
                     "white",
                     element_manager.create_element_with_group(&group_element),
                     element_manager,
-                    ButtonType::Minimize,
+                    ButtonType::Minimize(MinimizeOption {}),
                 ),
                 PartRect::default_button(
                     (-margin - button_size, End),
@@ -305,10 +324,11 @@ impl Figure {
                     "white",
                     element_manager.create_element_with_group(&group_element),
                     element_manager,
-                    ButtonType::ShowContent,
+                    ButtonType::ShowContent(ShowContentOption {}),
                 ),
             ],
             is_grabbed: false,
+            is_pushed: false,
             group_index,
         }
     }
@@ -324,16 +344,23 @@ impl Figure {
             parts.update_base();
         }
     }
-    pub(crate) fn grab(&mut self, raw_x: f64, raw_y: f64) -> bool {
-        let x = raw_x - self.base_rect.x_amount.value();
-        let y = raw_y - self.base_rect.y_amount.value();
+    pub(crate) fn grab(&mut self, x: f64, y: f64) -> bool {
         // 自分を更新しながら part_rect.is_inner で base_rect を参照しているので clone 不可避
         let clone = self.base_rect.clone();
-        if let Some(found_parts) = self.parts.iter_mut().find(|parts| {
-            let result = parts.is_inner(x, y, &clone);
-            result
-        }) {
-            self.is_grabbed = found_parts.grab(x, y, &clone)
+        // TODO
+        // 重なり順で最後の要素を掴みたい（プッシュしたい）と思っているので filter().last() を使用しているけど妥当か
+        // reverse() 的なことをするのと基本的には同じである
+        if let Some(found_parts) = self
+            .parts
+            .iter_mut()
+            .filter(|parts| {
+                let result = parts.is_inner(x, y, &clone);
+                result
+            })
+            .last()
+        {
+            self.is_grabbed = found_parts.grab(x, y, &clone);
+            self.is_pushed = found_parts.is_pushed;
         } else {
             self.base_rect.is_grabbed = true;
             self.is_grabbed = true
@@ -432,6 +459,19 @@ impl Figure {
                         }
                     }
                 }
+            }
+        } else if self.is_pushed {
+            if let Some(found_parts) = self.parts.iter_mut().find(|parts| parts.is_pushed) {
+                if !found_parts.is_inner(
+                    raw_drag_start_point.x + delta_point.x,
+                    raw_drag_start_point.y + delta_point.y,
+                    &self.base_rect,
+                ) {
+                    self.is_pushed = false;
+                    found_parts.is_pushed = false;
+                }
+            } else {
+                self.is_pushed = false;
             }
         }
     }

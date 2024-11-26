@@ -49,7 +49,14 @@ impl Binder {
             self.has_update = false;
         }
     }
-    pub fn mouse_up(&mut self) {
+    pub fn mouse_up(&mut self, raw_x: f64, raw_y: f64) {
+        if self.mouse_state.is_button_pushed {
+            let (x, y) = self.element_manager.get_internal_xy(raw_x, raw_y);
+            if let Some(found_figure) = self.figures.iter_mut().find(|figure| figure.is_pushed) {
+                found_figure.button_pressed(x, y, &self.element_manager);
+            }
+            self.mouse_state.is_button_pushed = false;
+        }
         self.mouse_state.is_dragged = false;
         self.update_base();
         self.has_update = true;
@@ -59,7 +66,7 @@ impl Binder {
         let (x, y) = self.element_manager.get_internal_xy(raw_x, raw_y);
         // mouse_down() => mouse_down() イベントを念の為抑制
         if self.mouse_state.is_dragged {
-            self.mouse_up();
+            self.mouse_up(raw_x, raw_y);
         }
         // 現状、一度につかめる Figure は一つだけ
         // TODO
@@ -77,7 +84,10 @@ impl Binder {
             if found_figure.grab(x, y) {
                 self.mouse_state.is_dragged = true;
                 self.mouse_state.drag_start_point = Point { x, y };
-            };
+            }
+            if found_figure.is_pushed {
+                self.mouse_state.is_button_pushed = true;
+            }
         }
         self.has_update = true;
     }
