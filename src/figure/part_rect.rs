@@ -251,9 +251,14 @@ impl PartRect {
         element
             .set_attribute("width", self.width_value(base_rect).to_string().as_str())
             .unwrap();
-        element
-            .set_attribute("height", self.height_value(base_rect).to_string().as_str())
-            .unwrap();
+        // TODO
+        // 最小化で0.0チェックを追加したが違和感
+        let height = self.height_value(base_rect);
+        if height > 0.0 {
+            element
+                .set_attribute("height", height.to_string().as_str())
+                .unwrap();
+        }
         if self.has_content {
             if let Some(content_element) =
                 element_manager.elements[self.element_index].next_element_sibling()
@@ -304,6 +309,9 @@ impl PartRect {
         let mut table_content_y = 0.0;
         if width_ratio_with_bar <= threshold
             || (width_ratio <= threshold && height_ratio <= threshold)
+            // TODO
+            // 最小化対応で height <= 0.0 の時に ScrollBarXも隠すようにしたが違和感
+            || base_height <= 0.0
         {
             for internal in self.internal_part_rect.iter() {
                 if let PartType::ScrollBarX(..) = internal.part_type {
@@ -369,7 +377,9 @@ impl PartRect {
                 let sibling_group = element_manager.elements[internal.element_index]
                     .next_element_sibling()
                     .unwrap();
-                sibling_group.set_inner_html(format!("<clipPath id='clip-path-table-content-{}'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", table_content_state.content_id_token, -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect)).as_str());
+                // TODO
+                // 最小化対応で height >= 0.0 チェックを追加したが違和感
+                sibling_group.set_inner_html(format!("<clipPath id='clip-path-table-content-{}'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", table_content_state.content_id_token, -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect).max(0.0)).as_str());
                 table_content_state.init(element_manager, &sibling_group);
                 table_content_x += self.x_value(base_rect);
                 table_content_y += self.y_value(base_rect);
@@ -492,29 +502,46 @@ impl PartRect {
         }
     }
 }
+
+#[derive(Clone, Debug)]
+pub(crate) struct MinimizeOption {
+    pub(crate) minimized_width: f64,
+    pub(crate) minimized_height: f64,
+}
+
+impl MinimizeOption {
+    pub(crate) fn minimize_window(&self, figure: &mut Figure) {
+        figure.base_rect.height.amount.base = self.minimized_height;
+        figure.base_rect.width.amount.base = self.minimized_width;
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct ShowContentOption {}
 
-#[derive(Clone, Debug)]
-pub(crate) struct MinimizeOption {}
-
 impl ShowContentOption {
-    pub(crate) fn test_func(&self, figure: &mut Figure, element_manager: &ElementManager) {
+    pub(crate) fn adjust_to_show_content(
+        &self,
+        figure: &mut Figure,
+        element_manager: &ElementManager,
+    ) {
         let mut content_width = 0.0;
         let mut content_height = 0.0;
         if let Some(_) = figure.parts.iter().find(|parts| {
             if let PartType::Scrollable = parts.part_type {
                 let (content_flag, width, height, ..) =
                     parts.get_internal_content_size(element_manager);
-                content_width = width;
-                content_height = height;
+                content_width = width / element_manager.scale;
+                content_height = height / element_manager.scale;
                 content_flag
             } else {
                 false
             }
         }) {
-            figure.base_rect.width.amount = Amount::new(content_width + 50.0);
-            figure.base_rect.height.amount = Amount::new(content_height + 60.0);
+            // TODO
+            // padding がめっちゃハードコーディング
+            figure.base_rect.width.amount = Amount::new(content_width + 28.0);
+            figure.base_rect.height.amount = Amount::new(content_height + 50.0);
         }
     }
 }

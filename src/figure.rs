@@ -119,9 +119,11 @@ impl Figure {
             }
             if let PartType::Button(button_type) = &found_parts.part_type {
                 match button_type.clone() {
-                    ButtonType::Minimize(_) => {}
+                    ButtonType::Minimize(minimize_option) => {
+                        minimize_option.minimize_window(self);
+                    }
                     ButtonType::ShowContent(show_content_option) => {
-                        show_content_option.test_func(self, element_manager);
+                        show_content_option.adjust_to_show_content(self, element_manager);
                     }
                 }
             }
@@ -187,8 +189,8 @@ impl Figure {
         Figure::default_window(
             x,
             y,
-            RectLength::new_with_min(1000.0, 120.0),
-            RectLength::new_with_min(90.0, 60.0),
+            RectLength::new_with_min(1000.0, 150.0),
+            RectLength::new_with_min(90.0, 30.0),
             frame_color,
             5.0,
             25.0,
@@ -242,8 +244,8 @@ impl Figure {
         Figure::default_window(
             x,
             y,
-            RectLength::new_with_min(200.0, 80.0),
-            RectLength::new_with_min(300.0, 80.0),
+            RectLength::new_with_min(200.0, 150.0),
+            RectLength::new_with_min(300.0, 30.0),
             frame_color,
             5.0,
             25.0,
@@ -268,6 +270,8 @@ impl Figure {
         let offset_y = title_height;
         let scroll_bar_thickness = 10.0;
         let button_size = 20.0;
+        let min_width = width.min;
+        let min_height = height.min;
         // TODO
         // clone しなくてよくはならないか
         let group_element = &mut element_manager.figure_groups[group_index].clone();
@@ -315,7 +319,10 @@ impl Figure {
                     "white",
                     element_manager.create_element_with_group(&group_element),
                     element_manager,
-                    ButtonType::Minimize(MinimizeOption {}),
+                    ButtonType::Minimize(MinimizeOption {
+                        minimized_width: min_width,
+                        minimized_height: min_height,
+                    }),
                 ),
                 PartRect::default_button(
                     (-margin - button_size, End),
