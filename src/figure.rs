@@ -54,11 +54,17 @@ pub(crate) enum PartType {
     Ignore,
     Button(ButtonType),
     Expand,
+    Title(TitleState),
     Drag,
     Scrollable,
     ScrollBarX(ScrollBarState),
     ScrollBarY(ScrollBarState),
     TableContent(TableContentState),
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct TitleState {
+    title: String,
 }
 
 #[derive(Clone, Debug)]
@@ -145,6 +151,7 @@ impl Figure {
             .unwrap()
     }
     pub(crate) fn new_log_window_dev(
+        title: &str,
         x: f64,
         y: f64,
         frame_color: &str,
@@ -187,9 +194,10 @@ impl Figure {
             },
         ];
         Figure::default_window(
+            title,
             x,
             y,
-            RectLength::new_with_min(1000.0, 150.0),
+            RectLength::new_with_min(1000.0, 180.0),
             RectLength::new_with_min(90.0, 30.0),
             frame_color,
             5.0,
@@ -200,6 +208,7 @@ impl Figure {
         )
     }
     pub(crate) fn new_window_dev(
+        title: &str,
         x: f64,
         y: f64,
         frame_color: &str,
@@ -242,9 +251,10 @@ impl Figure {
             },
         ];
         Figure::default_window(
+            title,
             x,
             y,
-            RectLength::new_with_min(200.0, 150.0),
+            RectLength::new_with_min(200.0, 180.0),
             RectLength::new_with_min(300.0, 30.0),
             frame_color,
             5.0,
@@ -255,6 +265,7 @@ impl Figure {
         )
     }
     pub(crate) fn default_window(
+        title: &str,
         start_x: f64,
         start_y: f64,
         width: RectLength,
@@ -304,10 +315,11 @@ impl Figure {
                     group_element,
                 ),
                 PartRect::default_title_bg(
+                    title,
                     margin,
                     offset_y,
                     frame_color,
-                    element_manager.create_element_with_defs_id(
+                    element_manager.create_element_with_symbol_id(
                         &group_element,
                         "def-default-window-title-background",
                     ),
@@ -389,7 +401,7 @@ impl Figure {
             if let Some(parts) = self.parts.iter_mut().find(|parts| parts.is_grabbed) {
                 let parent_width = parts.width_value(&self.base_rect);
                 let parent_height = parts.height_value(&self.base_rect);
-                if let PartType::Drag = parts.part_type {
+                if let PartType::Drag | PartType::Title(..) = parts.part_type {
                     self.base_rect
                         .move_xy(&drag_start_point, &delta_point, true);
                 } else if let PartType::Scrollable = parts.part_type {

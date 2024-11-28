@@ -1,7 +1,7 @@
 use crate::binder::element_manager::ElementManager;
 use crate::figure::base_rect::BaseRect;
 use crate::figure::AmountPositionType::{ContentBase, End, Ignore, Start};
-use crate::figure::{AmountPositionType, Figure, PartType, ScrollBarState};
+use crate::figure::{AmountPositionType, Figure, PartType, ScrollBarState, TitleState};
 use crate::math::Amount;
 use web_sys::Element;
 
@@ -126,6 +126,7 @@ impl PartRect {
         }
     }
     pub(crate) fn default_title_bg(
+        title: &str,
         margin: f64,
         bg_height: f64,
         color: &str,
@@ -136,7 +137,9 @@ impl PartRect {
             y_amounts: vec![(margin, Start), (margin + bg_height, Start)],
             color: color.to_string(),
             element_index,
-            part_type: PartType::Drag,
+            part_type: PartType::Title(TitleState {
+                title: title.to_string(),
+            }),
             is_grabbed: false,
             is_pushed: false,
             internal_part_rect: vec![],
@@ -226,7 +229,7 @@ impl PartRect {
                     false
                 }
             }
-            PartType::Expand | PartType::Drag => {
+            PartType::Expand | PartType::Drag | PartType::Title(..) => {
                 true
             }
             PartType::Button(_) => {
@@ -241,6 +244,12 @@ impl PartRect {
         if !self.is_initialized {
             if !self.color.is_empty() {
                 element.set_attribute("fill", self.color.as_str()).unwrap();
+            }
+            if let PartType::Title(title_status) = &self.part_type {
+                element_manager.elements[self.element_index]
+                    .next_element_sibling()
+                    .unwrap()
+                    .set_inner_html(title_status.title.as_str());
             }
             self.is_initialized = true;
         }
@@ -400,6 +409,13 @@ impl PartRect {
                     )
                     .unwrap();
             }
+        }
+        // TODO
+        // 最小化対応で height <= 0.0 の時に Scrollableを隠すようにしたが違和感
+        if base_height <= 0.0 {
+            element_manager.elements[self.element_index]
+                .set_attribute("height", "0")
+                .unwrap();
         }
     }
     pub(crate) fn get_internal_content_size(

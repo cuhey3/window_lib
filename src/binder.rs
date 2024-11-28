@@ -32,9 +32,30 @@ impl Binder {
         let mut element_manager = ElementManager::new("container");
         let mut binder = Binder {
             figures: vec![
-                Figure::new_window_dev(100.0, 100.0, "#999", "status1", &mut element_manager),
-                Figure::new_window_dev(300.0, 300.0, "#999", "status2", &mut element_manager),
-                Figure::new_log_window_dev(50.0, 700.0, "#999", "log", &mut element_manager),
+                Figure::new_window_dev(
+                    "プレイヤー1",
+                    100.0,
+                    100.0,
+                    "#333",
+                    "status1",
+                    &mut element_manager,
+                ),
+                Figure::new_window_dev(
+                    "プレイヤー2",
+                    320.0,
+                    100.0,
+                    "#333",
+                    "status2",
+                    &mut element_manager,
+                ),
+                Figure::new_log_window_dev(
+                    "ゲームログ",
+                    50.0,
+                    700.0,
+                    "#333",
+                    "log",
+                    &mut element_manager,
+                ),
             ],
             mouse_state: MouseState::new(),
             element_manager,
