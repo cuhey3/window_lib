@@ -1,4 +1,5 @@
 use crate::binder::element_manager::ElementManager;
+use crate::binder::ContentManager;
 use crate::figure::base_rect::BaseRect;
 use crate::figure::AmountPositionType::{ContentBase, End, Ignore, Start};
 use crate::figure::{AmountPositionType, Figure, PartType, ScrollBarState, TitleState};
@@ -239,7 +240,12 @@ impl PartRect {
         };
         self.is_grabbed
     }
-    pub(crate) fn adjust(&mut self, base_rect: &BaseRect, element_manager: &mut ElementManager) {
+    pub(crate) fn adjust(
+        &mut self,
+        base_rect: &BaseRect,
+        element_manager: &mut ElementManager,
+        content_manager: &ContentManager,
+    ) {
         let element = &element_manager.elements[self.element_index];
         if !self.is_initialized {
             if !self.color.is_empty() {
@@ -283,10 +289,10 @@ impl PartRect {
             }
         }
         for internal in self.internal_part_rect.iter_mut() {
-            internal.adjust(base_rect, element_manager);
+            internal.adjust(base_rect, element_manager, content_manager);
         }
         if let PartType::Scrollable = self.part_type {
-            self.update_scrollable(base_rect, element_manager);
+            self.adjust_scrollable(base_rect, element_manager, content_manager);
         }
     }
 
@@ -295,7 +301,12 @@ impl PartRect {
         element.set_attribute("width", "0").unwrap();
     }
 
-    fn update_scrollable(&self, base_rect: &BaseRect, element_manager: &ElementManager) {
+    fn adjust_scrollable(
+        &self,
+        base_rect: &BaseRect,
+        element_manager: &ElementManager,
+        content_manager: &ContentManager,
+    ) {
         let (has_content, group_x, group_y, content_element_index) =
             self.get_internal_content_size(element_manager);
         if !has_content {
@@ -389,7 +400,7 @@ impl PartRect {
                 // TODO
                 // 最小化対応で height >= 0.0 チェックを追加したが違和感
                 sibling_group.set_inner_html(format!("<clipPath id='clip-path-table-content-{}'><rect fill='white' x='{}' y='{}' width='{}' height='{}'></rect></clipPath>", table_content_state.content_id_token, -table_content_x, -table_content_y, self.width_value(base_rect), self.height_value(base_rect).max(0.0)).as_str());
-                table_content_state.init(element_manager, &sibling_group);
+                table_content_state.init(element_manager, &sibling_group, content_manager);
                 table_content_x += self.x_value(base_rect);
                 table_content_y += self.y_value(base_rect);
                 sibling_group

@@ -93,7 +93,7 @@ impl ElementManager {
         let symbol = self.document.get_element_by_id(id).unwrap();
         let symbol_children = symbol.children();
         let symbol_children_length = symbol_children.length();
-        for n in 0..symbol_children_length{
+        for n in 0..symbol_children_length {
             // 要素の clone (deep copy) は Node 単位でしかできない
             // 変換後は Node になるが、child_nodes() だと 空白Node もコピーすることになるので children() を使う
             let element = symbol_children.item(n).unwrap();

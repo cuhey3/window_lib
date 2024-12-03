@@ -3,6 +3,7 @@ use crate::binder::mouse_state::MouseState;
 use crate::figure::Figure;
 use crate::math::Point;
 use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen_test::console_log;
 
 pub(crate) mod element_manager;
 mod mouse_state;
@@ -13,8 +14,14 @@ pub struct Binder {
     mouse_state: MouseState,
     element_manager: ElementManager,
     pub(crate) has_update: bool,
+    pub(crate) content_manager: ContentManager,
 }
 
+impl Binder {
+    pub fn set_table_content_state(&mut self, table_content: Box<dyn TableContent>) {
+        self.content_manager.table_content = Some(table_content);
+    }
+}
 #[wasm_bindgen]
 impl Binder {
     pub fn new() -> Binder {
@@ -23,6 +30,9 @@ impl Binder {
             mouse_state: MouseState::new(),
             element_manager: ElementManager::new("container"),
             has_update: false,
+            content_manager: ContentManager {
+                table_content: None,
+            },
         };
         binder.initial_adjust();
         binder
@@ -42,7 +52,7 @@ impl Binder {
                 ),
                 Figure::new_window_dev(
                     "プレイヤー2",
-                    320.0,
+                    350.0,
                     100.0,
                     "#333",
                     "status2",
@@ -50,8 +60,8 @@ impl Binder {
                 ),
                 Figure::new_log_window_dev(
                     "ゲームログ",
-                    50.0,
-                    700.0,
+                    100.0,
+                    650.0,
                     "#333",
                     "log",
                     &mut element_manager,
@@ -60,9 +70,16 @@ impl Binder {
             mouse_state: MouseState::new(),
             element_manager,
             has_update: false,
+            content_manager: ContentManager {
+                table_content: None,
+            },
         };
         binder.initial_adjust();
         binder
+    }
+
+    pub fn set_dummy_state(&mut self) {
+        self.content_manager.table_content = Some(Box::new(DummyState {}));
     }
     pub fn update(&mut self) {
         if self.has_update {
@@ -147,18 +164,27 @@ impl Binder {
             figure.adjust(&self.element_manager);
             figure.base_rect.adjust(&mut self.element_manager);
             for part_rect in figure.parts.iter_mut() {
-                part_rect.adjust(&figure.base_rect, &mut self.element_manager);
+                part_rect.adjust(
+                    &figure.base_rect,
+                    &mut self.element_manager,
+                    &mut self.content_manager,
+                );
             }
         }
     }
     pub(crate) fn initial_adjust(&mut self) {
         for figure in self.figures.iter_mut() {
-            figure.adjust(&self.element_manager);
             figure.base_rect.initial_adjust(&self.element_manager);
             for part_rect in figure.parts.iter_mut() {
-                part_rect.adjust(&figure.base_rect, &mut self.element_manager);
+                part_rect.adjust(
+                    &figure.base_rect,
+                    &mut self.element_manager,
+                    &self.content_manager,
+                );
             }
+            figure.adjust(&self.element_manager);
         }
+        self.adjust();
     }
 
     pub(crate) fn update_base(&mut self) {
@@ -167,3 +193,37 @@ impl Binder {
         }
     }
 }
+
+pub struct ContentManager {
+    pub(crate) table_content: Option<Box<dyn TableContent>>,
+}
+
+impl ContentManager {
+    pub(crate) fn get_tbody(&self, key: &str) -> Option<Vec<Vec<String>>> {
+        if let Some(content) = &self.table_content {
+            Some(content.get_tbody(key))
+        } else {
+            None
+        }
+    }
+}
+pub trait TableContent {
+    fn get_thead(&self, key: &str) -> Vec<String> {
+        match key {
+            _ => vec![],
+        }
+    }
+    fn get_tbody(&self, key: &str) -> Vec<Vec<String>> {
+        match key {
+            _ => vec![
+                vec![String::from("行動順"), String::from("後攻")],
+                vec![String::from("HP/MHP"), String::from("50/50")],
+                vec![String::from("被ダメ"), String::from("5")],
+            ],
+        }
+    }
+}
+
+struct DummyState {}
+
+impl TableContent for DummyState {}

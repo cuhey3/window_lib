@@ -111,6 +111,7 @@ pub(crate) struct Figure {
     pub(crate) parts: Vec<PartRect>,
     pub(crate) is_grabbed: bool,
     pub(crate) is_pushed: bool,
+    pub(crate) is_initialized: bool,
     pub(crate) group_index: usize,
 }
 
@@ -136,7 +137,28 @@ impl Figure {
         };
     }
 
-    pub(crate) fn adjust(&self, element_manager: &ElementManager) {
+    pub(crate) fn adjust(&mut self, element_manager: &ElementManager) {
+        if !self.is_initialized {
+            let mut found_show_content_option = None;
+            self.parts.iter().find(|parts| {
+                if let PartType::Button(button_type) = &parts.part_type {
+                    if let ButtonType::ShowContent(show_content_option) = button_type {
+                        found_show_content_option = Some(show_content_option.clone());
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            });
+            if found_show_content_option.is_some() {
+                found_show_content_option
+                    .unwrap()
+                    .adjust_to_show_content(self, element_manager);
+            }
+            self.is_initialized = true;
+        }
         let group_element = &element_manager.figure_groups[self.group_index];
         group_element
             .set_attribute(
@@ -163,16 +185,13 @@ impl Figure {
         let mut table_content_state = TableContentState::new(table_content_token);
         table_content_state.tbody_data = vec![
             vec![
-                StringBinder::new_with_str("行動順"),
-                StringBinder::new_with_str("後攻"),
+                StringBinder::new_with_str("とっても長いログのテキストですとっても長いログのテキストですとっても長いログのテキストですとっても長いログのテキストです"),
             ],
             vec![
                 StringBinder::new_with_str("HP/MHP"),
-                StringBinder::new_with_str("50/50"),
             ],
             vec![
                 StringBinder::new_with_str("被ダメ"),
-                StringBinder::new_with_str("5"),
             ],
         ];
         table_content_state.tbody_column_styles = vec![
@@ -197,7 +216,7 @@ impl Figure {
             title,
             x,
             y,
-            RectLength::new_with_min(1000.0, 180.0),
+            RectLength::new_with_min(1000.0, 1000.0),
             RectLength::new_with_min(90.0, 30.0),
             frame_color,
             5.0,
@@ -348,6 +367,7 @@ impl Figure {
             ],
             is_grabbed: false,
             is_pushed: false,
+            is_initialized: false,
             group_index,
         }
     }

@@ -1,9 +1,11 @@
 use crate::binder::element_manager::ElementManager;
+use crate::binder::ContentManager;
 use crate::figure::TemporaryState;
 use web_sys::{Document, Element};
 
 #[derive(Clone, Debug)]
 pub(crate) struct TableContentState {
+    content_key: String,
     thead_data: Vec<StringBinder>,
     thead_column_styles: Vec<ColumnStyle>,
     pub(crate) tbody_data: Vec<Vec<StringBinder>>,
@@ -14,6 +16,7 @@ pub(crate) struct TableContentState {
 impl TableContentState {
     pub(crate) fn new(token: &str) -> TableContentState {
         TableContentState {
+            content_key: "my_new_content".to_string(),
             thead_data: vec![],
             thead_column_styles: vec![],
             tbody_data: vec![],
@@ -21,17 +24,22 @@ impl TableContentState {
             content_id_token: token.to_string(),
         }
     }
-    pub(crate) fn init(&self, element_manager: &ElementManager, table_container: &Element) {
+    pub(crate) fn init(
+        &self,
+        element_manager: &ElementManager,
+        table_container: &Element,
+        content_manager: &ContentManager,
+    ) {
         // TODO
         // StringBinderから値を取り出す
         // thead が空でない場合は thead の値を計算
         if !self.thead_data.is_empty() {
             // check_and_update
         }
-        // tbody が空でない場合は tbody の値を計算
-        if !self.tbody_data.is_empty() {
+        if let Some(content_tbody) = &content_manager.get_tbody(&self.content_key.as_str()) {
+            // tbody が空でない場合は tbody の値を計算
             let mut tbody_column_elements = vec![];
-            for n in 0..self.tbody_data.len() {
+            for n in 0..content_tbody.len() {
                 // TODO
                 // adjust の中では mut にできない
                 // for m in 0..self.tbody_data[n].len() {
@@ -54,13 +62,13 @@ impl TableContentState {
                 tbody_column_elements.push(tbody_column);
             }
             // 各text要素にtspanを追加
-            for n in 0..self.tbody_data.len() {
-                for m in 0..self.tbody_data[n].len() {
+            for n in 0..content_tbody.len() {
+                for m in 0..content_tbody[n].len() {
                     let tbody_tspan = element_manager
                         .document
                         .create_element_ns(Option::from("http://www.w3.org/2000/svg"), "tspan")
                         .unwrap();
-                    let value = &self.tbody_data[n][m].current_value;
+                    let value = &content_tbody[n][m];
                     tbody_tspan.set_inner_html(value.as_str());
                     let style = &self.tbody_column_styles[m];
                     if style.first_y != 0.0 {
